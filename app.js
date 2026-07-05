@@ -223,9 +223,7 @@ function parseXmlItems(xmlText, feed) {
 }
 
 function stripHtml(html) {
-  const el = document.createElement('div');
-  el.innerHTML = html;
-  return el.textContent || '';
+  return new DOMParser().parseFromString(html, 'text/html').body.textContent || '';
 }
 
 /* ── Refresh ── */
@@ -450,12 +448,12 @@ function updateChart() {
   Chart.defaults.color       = light ? '#6a6a90' : '#46465e';
   Chart.defaults.borderColor = light ? '#dde2f0' : '#1a1a2e';
   const ctx = $('threat-chart').getContext('2d');
-  if (chartMode === 'pie')  renderDonut(ctx);
-  else if (chartMode === 'type') renderTypeDonut(ctx);
+  if (chartMode === 'pie')  renderDonut(ctx, light);
+  else if (chartMode === 'type') renderTypeDonut(ctx, light);
   else renderLine(ctx);
 }
 
-function renderDonut(ctx) {
+function renderDonut(ctx, light) {
   const items = visibleItems();
   const counts = {}, colorMap = {};
   items.forEach(it => {
@@ -481,7 +479,7 @@ function renderDonut(ctx) {
   });
 }
 
-function renderTypeDonut(ctx) {
+function renderTypeDonut(ctx, light) {
   const items = visibleItems();
   const counts = {};
   const colorMap = {};
@@ -514,23 +512,29 @@ function renderTypeDonut(ctx) {
   });
 }
 
+/* Stable local-day key: YYYY-MM-DD in the viewer's timezone */
+function localDayKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function renderLine(ctx) {
   const items = visibleItems();
   const days = 7;
-  const dayLabels = [];
+  const dayKeys = [];      // for bucketing (stable)
+  const dayLabels = [];    // for display (human-readable)
   for (let i = days - 1; i >= 0; i--) {
     const d = new Date(); d.setDate(d.getDate() - i);
+    dayKeys.push(localDayKey(d));
     dayLabels.push(d.toLocaleDateString([], { month: 'short', day: 'numeric' }));
   }
-  const dayKey = d => d.toLocaleDateString([], { month: 'short', day: 'numeric' });
   const sources = [...new Set(items.map(i => i.source))];
   const datasets = sources.map(src => {
     const feed = feeds.find(f => f.name === src);
     const color = feed?.color || '#888';
     const perDay = {};
-    items.filter(i => i.source === src).forEach(i => { const k = dayKey(i.date); perDay[k] = (perDay[k]||0)+1; });
+    items.filter(i => i.source === src).forEach(i => { const k = localDayKey(i.date); perDay[k] = (perDay[k]||0)+1; });
     return {
-      label: src, data: dayLabels.map(l => perDay[l]||0),
+      label: src, data: dayKeys.map(k => perDay[k]||0),
       borderColor: color, backgroundColor: color+'20',
       borderWidth: 2, pointRadius: 4, pointHoverRadius: 6, tension: 0.3, fill: false,
     };
@@ -600,6 +604,14 @@ function closeSettings() { overlay.classList.add('hidden'); }
 function deleteFeed(feed) {
   feeds    = feeds.filter(f => f.url !== feed.url);
   allItems = allItems.filter(it => it.source !== feed.name);
+
+  /* If the open article came from this feed, reset the article view */
+  if (activeItemId && activeItemId.startsWith(feed.name + '-')) {
+    articleContent.hidden = true;
+    articleEmpty.hidden   = false;
+    activeItemId = null;
+  }
+
   saveAllFeeds();
   renderSourceChips();
   renderFeedList();
