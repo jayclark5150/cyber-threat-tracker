@@ -512,3 +512,136 @@ body {
 ::-webkit-scrollbar { width: 3px; height: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
+
+/* ── Mobile back button — hidden on desktop ── */
+#mobile-back { display: none; }
+
+/* ── Tablet (768 – 1024px) ── */
+@media (max-width: 1024px) {
+  #left-panel { width: 260px; min-width: 200px; }
+}
+
+/* ── Mobile (≤ 767px) ── */
+@media (max-width: 767px) {
+
+  /* Header */
+  .last-updated, .version-badge { display: none; }
+  .app-title { font-size: 13px; }
+  #header { padding: 0 10px; }
+  .hdr-btn { width: 28px; height: 28px; }
+
+  /* Filter / tag bars: tighter gap, larger touch targets */
+  #filter-bar, #tag-bar { gap: 3px; padding: 0 8px; }
+  .filter-chip { height: 26px; padding: 0 10px; }
+  .tag-chip    { height: 24px; padding: 0 8px; }
+
+  /* ── Slide-panel layout ── */
+  #main {
+    position: relative;
+    overflow: hidden;
+  }
+
+  #vertical-divider { display: none !important; }
+
+  #left-panel {
+    position: absolute;
+    inset: 0;
+    width: 100% !important;
+    min-width: 0;
+    z-index: 2;
+    transition: transform .28s cubic-bezier(.4,0,.2,1), opacity .28s;
+    will-change: transform;
+    background: var(--bg);
+  }
+
+  #right-panel {
+    position: absolute;
+    inset: 0;
+    min-width: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    z-index: 1;
+    transform: translateX(100%);
+    transition: transform .28s cubic-bezier(.4,0,.2,1);
+    will-change: transform;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Article-open state: right panel slides in, left dims and slides away */
+  #main.article-open #right-panel {
+    transform: translateX(0);
+    z-index: 2;
+  }
+  #main.article-open #left-panel {
+    transform: translateX(-28%);
+    opacity: .4;
+    pointer-events: none;
+  }
+
+  /* Remove desktop flex sizing so right-panel can scroll naturally */
+  #article-view {
+    flex: none !important;
+    height: auto !important;
+    overflow-y: visible !important;
+    padding: 0 !important;
+  }
+  #article-empty  { min-height: 55vmax; padding: 40px 20px; height: auto; }
+  #article-content { padding: 16px 16px 24px; }
+
+  /* Hide horizontal divider; chart sits below article */
+  #right-divider { display: none !important; }
+  #chart-panel {
+    flex-shrink: 0;
+    height: 260px;
+    padding: 10px 14px 12px;
+    border-top: 1px solid var(--border);
+  }
+  /* Safe-area bottom padding (iPhone home indicator) */
+  #chart-panel { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+
+  /* Mobile back button */
+  #mobile-back {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 11px 14px;
+    background: var(--surface);
+    border: none;
+    border-bottom: 1px solid var(--border);
+    color: var(--accent-text);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+    text-align: left;
+  }
+  #mobile-back:active { background: var(--source-row); }
+
+  /* Touch-friendlier feed items */
+  .feed-item { padding: 12px 12px 12px 14px; min-height: 60px; }
+  .feed-item-title { font-size: 13px; -webkit-line-clamp: 3; }
+
+  /* Larger article title on mobile */
+  #article-title { font-size: 17px; }
+
+  /* Modal full-screen on mobile */
+  .modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 92vh !important;
+    border-radius: 16px 16px 0 0 !important;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: 0;
+  }
+  .overlay { align-items: flex-end !important; }
+
+  /* Item count hidden on mobile (space) */
+  #item-count { display: none; }
+}

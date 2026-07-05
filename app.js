@@ -398,6 +398,8 @@ function selectItem(item) {
   articleEmpty.hidden = true;
   articleContent.hidden = false;
   document.getElementById('article-view').scrollTop = 0;
+  document.getElementById('right-panel').scrollTop = 0;
+  if (window._showArticlePanel) window._showArticlePanel();
 
   /* Source header */
   articleAvatar.style.background = item.color;
@@ -824,6 +826,49 @@ searchInput.addEventListener('input', () => {
   divider.addEventListener('touchstart',  e => { beginDrag(e.touches[0].clientY); e.preventDefault(); }, { passive: false });
   document.addEventListener('touchmove',  e => { if (dragging) { onMove(e.touches[0].clientY); e.preventDefault(); } }, { passive: false });
   document.addEventListener('touchend',   endDrag);
+}());
+
+/* ── Mobile panel navigation ── */
+(function () {
+  const main      = $('main');
+  const backBtn   = $('mobile-back');
+
+  function isMobile() { return window.innerWidth <= 767; }
+
+  function showArticlePanel() {
+    if (isMobile()) main.classList.add('article-open');
+  }
+
+  function showListPanel() {
+    main.classList.remove('article-open');
+  }
+
+  /* Expose for selectItem */
+  window._showArticlePanel = showArticlePanel;
+
+  /* Back button */
+  if (backBtn) backBtn.addEventListener('click', showListPanel);
+
+  /* Swipe right → back to list */
+  let tx = 0, ty = 0;
+  document.addEventListener('touchstart', e => {
+    tx = e.touches[0].clientX;
+    ty = e.touches[0].clientY;
+  }, { passive: true });
+  document.addEventListener('touchend', e => {
+    if (!isMobile()) return;
+    const dx = e.changedTouches[0].clientX - tx;
+    const dy = e.changedTouches[0].clientY - ty;
+    if (dx > 60 && Math.abs(dy) < Math.abs(dx) && main.classList.contains('article-open')) {
+      showListPanel();
+    }
+  }, { passive: true });
+
+  /* On resize to desktop, reset panel state */
+  window.addEventListener('resize', () => {
+    if (!isMobile()) showListPanel();
+    if (chart) chart.resize();
+  });
 }());
 
 /* ── Service worker ── */
