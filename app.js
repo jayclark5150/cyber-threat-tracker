@@ -15,18 +15,18 @@ const FEEDS = [
   { name: 'SANS ISC',          url: 'https://isc.sans.edu/rssfeed_full.xml',                      color: '#ffd600', initials: 'SI', enabled: true  },
   { name: 'Securelist',        url: 'https://securelist.com/feed/',                               color: '#ef5350', initials: 'SL', enabled: true  },
   { name: 'Unit 42',           url: 'https://unit42.paloaltonetworks.com/feed/',                  color: '#26c6da', initials: 'U4', enabled: true  },
-  { name: 'Recorded Future',   url: 'https://www.recordedfuture.com/feed',                        color: '#00b4d8', initials: 'RF', enabled: false },
-  { name: 'Mandiant',          url: 'https://www.mandiant.com/resources/blog/rss.xml',            color: '#f44336', initials: 'MD', enabled: false },
-  { name: 'IBM Security',      url: 'https://securityintelligence.com/feed/',                     color: '#42a5f5', initials: 'IB', enabled: false },
-  { name: 'MISP',              url: 'https://www.misp-project.org/feed.xml',                      color: '#7e57c2', initials: 'MI', enabled: false },
-  { name: 'Abuse.ch',          url: 'https://abuse.ch/blog/feed/',                               color: '#9ccc65', initials: 'AB', enabled: false },
-  { name: 'ANY.RUN',           url: 'https://any.run/cybersecurity-blog/rss/',                    color: '#00e5ff', initials: 'AR', enabled: false },
-  { name: 'Google Proj Zero',  url: 'https://googleprojectzero.blogspot.com/feeds/posts/default', color: '#ffca28', initials: 'G0', enabled: false },
+  { name: 'Recorded Future',   url: 'https://www.recordedfuture.com/feed',                        color: '#00b4d8', initials: 'RF', enabled: true  },
+  { name: 'Mandiant',          url: 'https://www.mandiant.com/resources/blog/rss.xml',            color: '#f44336', initials: 'MD', enabled: true  },
+  { name: 'IBM Security',      url: 'https://securityintelligence.com/feed/',                     color: '#42a5f5', initials: 'IB', enabled: true  },
+  { name: 'MISP',              url: 'https://www.misp-project.org/feed.xml',                      color: '#7e57c2', initials: 'MI', enabled: true  },
+  { name: 'Abuse.ch',          url: 'https://abuse.ch/blog/feed/',                               color: '#9ccc65', initials: 'AB', enabled: true  },
+  { name: 'ANY.RUN',           url: 'https://any.run/cybersecurity-blog/rss/',                    color: '#00e5ff', initials: 'AR', enabled: true  },
+  { name: 'Google Proj Zero',  url: 'https://googleprojectzero.blogspot.com/feeds/posts/default', color: '#ffca28', initials: 'G0', enabled: true  },
   // Additional sources (ISC list)
-  { name: 'GreyNoise',         url: 'https://www.greynoise.io/blog/rss.xml',                      color: '#78909c', initials: 'GN', enabled: false },
-  { name: 'VirusTotal',        url: 'https://blog.virustotal.com/feeds/posts/default',             color: '#26a69a', initials: 'VT', enabled: false },
-  { name: 'CISA Alerts',       url: 'https://www.cisa.gov/uscert/ncas/alerts.xml',                color: '#b71c1c', initials: 'CA', enabled: false },
-  { name: 'CISA Cur. Activity',url: 'https://www.cisa.gov/uscert/ncas/current-activity.xml',     color: '#e65100', initials: 'CC', enabled: false },
+  { name: 'GreyNoise',         url: 'https://www.greynoise.io/blog/rss.xml',                      color: '#78909c', initials: 'GN', enabled: true  },
+  { name: 'VirusTotal',        url: 'https://blog.virustotal.com/feeds/posts/default',             color: '#26a69a', initials: 'VT', enabled: true  },
+  { name: 'CISA Alerts',       url: 'https://www.cisa.gov/uscert/ncas/alerts.xml',                color: '#b71c1c', initials: 'CA', enabled: true  },
+  { name: 'CISA Cur. Activity',url: 'https://www.cisa.gov/uscert/ncas/current-activity.xml',     color: '#e65100', initials: 'CC', enabled: true  },
 ];
 
 /* ── Threat tag rules ── */
@@ -49,6 +49,7 @@ const TAG_RULES = [
     words: ['ddos','denial of service','distributed denial','mirai','botnet attack'] },
 ];
 
+const VERSION     = 'v0.0.1';
 const REFRESH_MS  = 15 * 60 * 1000;
 const STORE_KEY   = 'ctt-v2';
 const CUSTOM_KEY  = 'ctt-custom';

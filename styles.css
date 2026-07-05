@@ -112,6 +112,11 @@ body {
   background: var(--source-row); border-radius: 10px; padding: 1px 8px;
 }
 .last-updated { font-size: 11px; color: var(--text-4); }
+.version-badge {
+  font-size: 10px; color: var(--text-4);
+  background: var(--source-row); border: 1px solid var(--border-strong);
+  border-radius: 4px; padding: 1px 6px; font-family: monospace;
+}
 .hdr-btn {
   width: 30px; height: 30px; border-radius: 6px;
   background: transparent; border: 1px solid transparent;
