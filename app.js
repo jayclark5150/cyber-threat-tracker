@@ -842,6 +842,27 @@ searchInput.addEventListener('input', () => {
   renderFeedList(); updateChart(); updateHeader();
 });
 
+/* ── Keyboard navigation (↑/↓ move selection through the story list) ── */
+document.addEventListener('keydown', e => {
+  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const tag = document.activeElement?.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || document.activeElement?.isContentEditable) return;
+  if (!overlay.classList.contains('hidden')) return;
+
+  const items = visibleItems();
+  if (!items.length) return;
+
+  e.preventDefault();
+  let idx = items.findIndex(it => it.id === activeItemId);
+  idx = e.key === 'ArrowDown' ? Math.min(idx < 0 ? 0 : idx + 1, items.length - 1)
+                               : Math.max(idx < 0 ? 0 : idx - 1, 0);
+
+  const item = items[idx];
+  selectItem(item);
+  feedItemsEl.querySelector(`[data-id="${CSS.escape(item.id)}"]`)?.scrollIntoView({ block: 'nearest' });
+});
+
 /* ── Theme toggle ── */
 (function () {
   const html = document.documentElement;
