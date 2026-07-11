@@ -236,6 +236,13 @@ body {
 .feed-item.priority-high.active { border-left-color: #ff8c00; }
 .feed-item.priority-medium   { border-left-color: #e8b400; }
 .feed-item-meta { display: flex; align-items: center; gap: 6px; }
+.unread-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--accent); flex-shrink: 0;
+}
+.feed-item.read .feed-item-title { color: var(--text-3); font-weight: 400; }
+.feed-item.read .source-avatar-sm { opacity: .6; }
+.feed-item.read .unread-dot { display: none; }
 .source-avatar-sm {
   width: 20px; height: 20px; border-radius: 5px;
   display: flex; align-items: center; justify-content: center;

@@ -53,6 +53,8 @@ const VERSION     = 'v0.0.1';
 const REFRESH_MS  = 15 * 60 * 1000;
 const STORE_KEY   = 'ctt-v2';
 const CUSTOM_KEY  = 'ctt-custom';
+const READ_KEY    = 'ctt-read';
+const READ_CAP    = 3000; // cap persisted read-id history to avoid unbounded growth
 
 const CUSTOM_COLORS = [
   '#e879f9','#34d399','#fb923c','#60a5fa','#f472b6',
@@ -73,6 +75,7 @@ let chartMode     = 'type';
 let chart         = null;
 let refreshTimer  = null;
 let feeds         = loadAllFeeds();
+let readIds       = loadReadIds();
 
 /* ── DOM refs ── */
 const $ = id => document.getElementById(id);
@@ -102,6 +105,7 @@ const refreshBtn     = $('refresh-btn');
 const settingsBtn    = $('settings-btn');
 const overlay        = $('settings-overlay');
 const settingsClose  = $('settings-close');
+const markReadBtn    = $('mark-read-btn');
 const sourceList     = $('feed-source-list');
 const saveSettingsBtn= $('save-settings-btn');
 const chartTabBtns   = document.querySelectorAll('.chart-tab');
@@ -121,6 +125,34 @@ function saveAllFeeds() {
   feeds.filter(f => !f.custom).forEach(f => { s[f.name] = f.enabled; });
   localStorage.setItem(STORE_KEY,  JSON.stringify(s));
   localStorage.setItem(CUSTOM_KEY, JSON.stringify(feeds.filter(f => f.custom)));
+}
+
+/* ── Read/unread tracking ── */
+function loadReadIds() {
+  try { return new Set(JSON.parse(localStorage.getItem(READ_KEY) || '[]')); }
+  catch { return new Set(); }
+}
+function saveReadIds() {
+  const ids = [...readIds];
+  if (ids.length > READ_CAP) ids.splice(0, ids.length - READ_CAP);
+  localStorage.setItem(READ_KEY, JSON.stringify(ids));
+}
+function markRead(item) {
+  if (item.read) return;
+  item.read = true;
+  readIds.add(item.id);
+  saveReadIds();
+  const el = feedItemsEl.querySelector(`[data-id="${CSS.escape(item.id)}"]`);
+  if (el) { el.classList.add('read'); el.querySelector('.unread-dot')?.remove(); }
+  updateHeader();
+}
+function markAllRead() {
+  let changed = false;
+  allItems.forEach(it => { if (!it.read) { it.read = true; readIds.add(it.id); changed = true; } });
+  if (!changed) return;
+  saveReadIds();
+  renderFeedList();
+  updateHeader();
 }
 
 /* ── Threat tag detection ── */
@@ -191,11 +223,12 @@ function parseJsonItems(items, feed) {
     const desc    = stripHtml(rawDesc).slice(0, 600);
     const title   = item.title || '(no title)';
     const tags    = detectTags(title, desc);
+    const id      = `${feed.name}-${i}-${date.getTime()}`;
     return {
-      id: `${feed.name}-${i}-${date.getTime()}`,
-      source: feed.name, color: feed.color, initials: feed.initials,
+      id, source: feed.name, color: feed.color, initials: feed.initials,
       title, link: item.link || item.guid || '',
       desc, date, ts: date.getTime(), tags, priority: getPriority(tags),
+      read: readIds.has(id),
     };
   });
 }
@@ -214,10 +247,11 @@ function parseXmlItems(xmlText, feed) {
                || node.querySelector('link')?.getAttribute('href')
                || get('guid') || '';
     const tags  = detectTags(title, desc);
+    const id    = `${feed.name}-${i}-${date.getTime()}`;
     return {
-      id: `${feed.name}-${i}-${date.getTime()}`,
-      source: feed.name, color: feed.color, initials: feed.initials,
+      id, source: feed.name, color: feed.color, initials: feed.initials,
       title, link, desc, date, ts: date.getTime(), tags, priority: getPriority(tags),
+      read: readIds.has(id),
     };
   });
 }
@@ -260,8 +294,10 @@ async function refreshAll(quiet = false) {
 
 /* ── Header ── */
 function updateHeader() {
-  const n = visibleItems().length;
-  itemCount.textContent = `${n} item${n !== 1 ? 's' : ''}`;
+  const items = visibleItems();
+  const n = items.length;
+  const unread = items.filter(it => !it.read).length;
+  itemCount.textContent = `${n} item${n !== 1 ? 's' : ''}` + (unread ? ` · ${unread} unread` : '');
   lastUpdated.textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
@@ -330,12 +366,18 @@ function renderFeedList() {
 
   items.forEach(item => {
     const el = document.createElement('div');
-    el.className = `feed-item priority-${item.priority}${item.id === activeItemId ? ' active' : ''}`;
+    el.className = `feed-item priority-${item.priority}${item.read ? ' read' : ''}${item.id === activeItemId ? ' active' : ''}`;
     el.dataset.id = item.id;
 
     /* Meta row */
     const meta = document.createElement('div');
     meta.className = 'feed-item-meta';
+
+    if (!item.read) {
+      const dot = document.createElement('span');
+      dot.className = 'unread-dot';
+      meta.appendChild(dot);
+    }
 
     const av = document.createElement('div');
     av.className = 'source-avatar-sm';
@@ -392,6 +434,7 @@ function selectItem(item) {
   document.querySelectorAll('.feed-item').forEach(el => {
     el.classList.toggle('active', el.dataset.id === item.id);
   });
+  markRead(item);
 
   articleEmpty.hidden = true;
   articleContent.hidden = false;
@@ -722,6 +765,7 @@ if (addFeedBtn) addFeedBtn.addEventListener('click', testAndAddFeed);
 if (newFeedUrl)  newFeedUrl.addEventListener('keydown',  e => { if (e.key === 'Enter') testAndAddFeed(); });
 if (newFeedName) newFeedName.addEventListener('keydown', e => { if (e.key === 'Enter') $('new-feed-url')?.focus(); });
 refreshBtn.addEventListener('click',   () => refreshAll());
+markReadBtn.addEventListener('click',  markAllRead);
 settingsBtn.addEventListener('click',  openSettings);
 settingsClose.addEventListener('click', closeSettings);
 saveSettingsBtn.addEventListener('click', applySettings);
