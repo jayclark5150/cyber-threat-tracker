@@ -171,6 +171,12 @@ body {
 .tag-chip[data-tag="Data Breach"].active   { color: #00c2e0; background: #00c2e018; border-color: #00c2e030; }
 .tag-chip[data-tag="Critical Infra"].active{ color: #ff9f43; background: #ff9f4318; border-color: #ff9f4330; }
 
+.chip-divider { width: 1px; height: 16px; background: var(--border-strong); margin: 0 3px; flex-shrink: 0; }
+.priority-chip[data-priority="critical"].active { color: #ff4757; background: #ff475718; border-color: #ff475730; }
+.priority-chip[data-priority="high"].active     { color: #ff8c00; background: #ff8c0018; border-color: #ff8c0030; }
+.priority-chip[data-priority="medium"].active   { color: #e8b400; background: #e8b40018; border-color: #e8b40030; }
+.priority-chip[data-priority="low"].active      { color: var(--text); background: var(--source-row); }
+
 /* ── Main layout — flex for resizable columns ── */
 #main {
   display: flex;

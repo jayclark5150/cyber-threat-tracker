@@ -69,6 +69,7 @@ function toInitials(name) {
 let allItems      = [];
 let activeFilter  = 'all';   // source filter
 let activeTag     = 'all';   // threat tag filter
+let activePriority= 'all';   // priority filter
 let searchQuery   = '';
 let activeItemId  = null;
 let chartMode     = 'type';
@@ -306,6 +307,7 @@ function visibleItems() {
   return allItems.filter(it => {
     if (activeFilter !== 'all' && it.source !== activeFilter) return false;
     if (activeTag !== 'all' && !it.tags.some(t => t.tag === activeTag)) return false;
+    if (activePriority !== 'all' && it.priority !== activePriority) return false;
     if (searchQuery && !it.title.toLowerCase().includes(searchQuery)) return false;
     return true;
   });
@@ -344,11 +346,24 @@ function makeSourceChip(label, value, color) {
 
 /* ── Tag bar (static, set active state) ── */
 function initTagBar() {
-  tagBar.querySelectorAll('.tag-chip').forEach(chip => {
+  tagBar.querySelectorAll('.tag-chip[data-tag]').forEach(chip => {
     chip.addEventListener('click', () => {
       activeTag = chip.dataset.tag;
-      tagBar.querySelectorAll('.tag-chip').forEach(c => c.classList.remove('active'));
+      tagBar.querySelectorAll('.tag-chip[data-tag]').forEach(c => c.classList.remove('active'));
       chip.classList.add('active');
+      renderFeedList(); updateChart(); updateHeader();
+    });
+  });
+}
+
+/* ── Priority bar (static, set active state) ── */
+function initPriorityBar() {
+  tagBar.querySelectorAll('.priority-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const val = chip.dataset.priority;
+      activePriority = activePriority === val ? 'all' : val;
+      tagBar.querySelectorAll('.priority-chip').forEach(c => c.classList.remove('active'));
+      if (activePriority !== 'all') chip.classList.add('active');
       renderFeedList(); updateChart(); updateHeader();
     });
   });
@@ -934,4 +949,5 @@ if ('serviceWorker' in navigator) {
 
 /* ── Init ── */
 initTagBar();
+initPriorityBar();
 refreshAll();
