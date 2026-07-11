@@ -2,7 +2,7 @@
 
 A Progressive Web App (PWA) that aggregates 22 cyber threat intelligence RSS feeds into a single, real-time dashboard.
 
-![Version](https://img.shields.io/badge/version-v0.0.1-blue) ![License](https://img.shields.io/badge/license-MIT-green)
+![Version](https://img.shields.io/badge/version-v0.1.0-blue) ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Features
 
