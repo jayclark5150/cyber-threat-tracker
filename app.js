@@ -261,6 +261,16 @@ function stripHtml(html) {
   return new DOMParser().parseFromString(html, 'text/html').body.textContent || '';
 }
 
+/* Only allow http(s) URLs through to an href — feed <link>/<guid> values are
+   untrusted and could otherwise carry a javascript: URI. */
+function safeExternalUrl(url) {
+  if (!url) return null;
+  try {
+    const u = new URL(url, location.href);
+    return (u.protocol === 'http:' || u.protocol === 'https:') ? u.href : null;
+  } catch { return null; }
+}
+
 /* ── Refresh ── */
 const FETCH_CONCURRENCY = 5;   // cap simultaneous proxy requests to avoid rate-limit bursts
 const FETCH_STAGGER_MS  = 200; // pause between a lane's fetches
@@ -524,7 +534,9 @@ function selectItem(item) {
     articleDesc.textContent = item.desc || 'No description available.';
   }
 
-  articleLink.href = item.link;
+  const safeLink = safeExternalUrl(item.link);
+  articleLink.style.display = safeLink ? '' : 'none';
+  if (safeLink) articleLink.href = safeLink;
 
   /* Reading time */
   const words = item.desc.split(/\s+/).length;
