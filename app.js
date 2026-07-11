@@ -639,7 +639,13 @@ function openSettings() {
     const tog = document.createElement('button');
     tog.className = 'source-toggle' + (feed.enabled ? ' on' : '');
     tog.dataset.idx = idx;
-    tog.addEventListener('click', () => tog.classList.toggle('on'));
+    tog.setAttribute('role', 'switch');
+    tog.setAttribute('aria-checked', String(feed.enabled));
+    tog.setAttribute('aria-label', `Enable ${feed.name}`);
+    tog.addEventListener('click', () => {
+      const on = tog.classList.toggle('on');
+      tog.setAttribute('aria-checked', String(on));
+    });
 
     row.append(dot, nameEl, tog);
 
@@ -647,6 +653,7 @@ function openSettings() {
       const del = document.createElement('button');
       del.className = 'source-delete';
       del.title = 'Remove this feed';
+      del.setAttribute('aria-label', `Remove ${feed.name}`);
       del.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>`;
       del.addEventListener('click', () => deleteFeed(feed));
       row.appendChild(del);
@@ -806,10 +813,18 @@ searchInput.addEventListener('input', () => {
   const saved = localStorage.getItem('ctt-theme') || 'dark';
   html.dataset.theme = saved;
 
+  function syncLabel() {
+    const label = html.dataset.theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+    themeBtn.setAttribute('aria-label', label);
+    themeBtn.title = label;
+  }
+  syncLabel();
+
   themeBtn.addEventListener('click', () => {
     const next = html.dataset.theme === 'dark' ? 'light' : 'dark';
     html.dataset.theme = next;
     localStorage.setItem('ctt-theme', next);
+    syncLabel();
     if (chart) { chart.destroy(); chart = null; updateChart(); }
   });
 }());
