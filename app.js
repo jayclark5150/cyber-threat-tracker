@@ -783,11 +783,16 @@ function showToast(msg, ms = 3000) {
 }
 
 /* ── OPML export ── */
+function escapeXmlAttr(s) {
+  return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function exportOPML() {
   const now = new Date().toUTCString();
   const items = feeds.map(f => {
-    const name = f.name.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-    return `      <outline type="rss" text="${name}" title="${name}" xmlUrl="${f.url}"/>`;
+    const name = escapeXmlAttr(f.name);
+    const url  = escapeXmlAttr(f.url);
+    return `      <outline type="rss" text="${name}" title="${name}" xmlUrl="${url}"/>`;
   }).join('\n');
 
   const opml = `<?xml version="1.0" encoding="UTF-8"?>
