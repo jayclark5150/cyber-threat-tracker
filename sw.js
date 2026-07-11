@@ -1,10 +1,14 @@
-const CACHE = 'ctt-v5';
+const CACHE = 'ctt-v6';
 const ASSETS = [
   './',
   './index.html',
   './styles.css',
   './app.js',
   './manifest.json',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/apple-touch-icon.png',
+  './icons/favicon-32.png',
 ];
 
 self.addEventListener('install', e => {
