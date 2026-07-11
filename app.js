@@ -112,6 +112,13 @@ const saveSettingsBtn= $('save-settings-btn');
 const chartTabBtns   = document.querySelectorAll('.chart-tab');
 const toast          = $('toast');
 
+/* Storage can throw (Safari private browsing, quota exceeded, disabled by
+   policy) — swallow write failures so callers don't break mid-action. */
+function safeSetItem(key, value) {
+  try { localStorage.setItem(key, value); return true; }
+  catch (e) { console.warn('localStorage write failed', key, e); return false; }
+}
+
 /* ── Settings ── */
 function loadAllFeeds() {
   try {
@@ -124,8 +131,8 @@ function loadAllFeeds() {
 function saveAllFeeds() {
   const s = {};
   feeds.filter(f => !f.custom).forEach(f => { s[f.name] = f.enabled; });
-  localStorage.setItem(STORE_KEY,  JSON.stringify(s));
-  localStorage.setItem(CUSTOM_KEY, JSON.stringify(feeds.filter(f => f.custom)));
+  safeSetItem(STORE_KEY,  JSON.stringify(s));
+  safeSetItem(CUSTOM_KEY, JSON.stringify(feeds.filter(f => f.custom)));
 }
 
 /* ── Read/unread tracking ── */
@@ -136,7 +143,7 @@ function loadReadIds() {
 function saveReadIds() {
   const ids = [...readIds];
   if (ids.length > READ_CAP) ids.splice(0, ids.length - READ_CAP);
-  localStorage.setItem(READ_KEY, JSON.stringify(ids));
+  safeSetItem(READ_KEY, JSON.stringify(ids));
 }
 function markRead(item) {
   if (item.read) return;
@@ -883,7 +890,8 @@ document.addEventListener('keydown', e => {
 /* ── Theme toggle ── */
 (function () {
   const html = document.documentElement;
-  const saved = localStorage.getItem('ctt-theme') || 'dark';
+  let saved = 'dark';
+  try { saved = localStorage.getItem('ctt-theme') || 'dark'; } catch (e) { console.warn('localStorage read failed', e); }
   html.dataset.theme = saved;
 
   function syncLabel() {
@@ -896,7 +904,7 @@ document.addEventListener('keydown', e => {
   themeBtn.addEventListener('click', () => {
     const next = html.dataset.theme === 'dark' ? 'light' : 'dark';
     html.dataset.theme = next;
-    localStorage.setItem('ctt-theme', next);
+    safeSetItem('ctt-theme', next);
     syncLabel();
     if (chart) { chart.destroy(); chart = null; updateChart(); }
   });
