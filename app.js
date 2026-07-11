@@ -262,6 +262,30 @@ function stripHtml(html) {
 }
 
 /* ── Refresh ── */
+const FETCH_CONCURRENCY = 5;   // cap simultaneous proxy requests to avoid rate-limit bursts
+const FETCH_STAGGER_MS  = 200; // pause between a lane's fetches
+
+/* Runs feedList through fetchFeed with bounded concurrency + a per-lane stagger,
+   instead of firing every feed at once (which can burst-trip the free rss2json quota). */
+async function fetchAllStaggered(feedList) {
+  const results = new Array(feedList.length);
+  let next = 0;
+  async function lane() {
+    while (next < feedList.length) {
+      const i = next++;
+      try { results[i] = { status: 'fulfilled', value: await fetchFeed(feedList[i]) }; }
+      catch (e) { results[i] = { status: 'rejected', reason: e }; }
+      if (next < feedList.length) await new Promise(r => setTimeout(r, FETCH_STAGGER_MS));
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(FETCH_CONCURRENCY, feedList.length) }, lane));
+  return results;
+}
+
+/* Most recent successful fetch per feed name — lets a transient failure fall back
+   to last-known articles instead of blanking that source out of the dashboard. */
+let lastGoodByFeed = new Map();
+
 async function refreshAll(quiet = false) {
   const enabled = feeds.filter(f => f.enabled);
   if (!enabled.length) { showToast('No feeds enabled'); return; }
@@ -269,15 +293,20 @@ async function refreshAll(quiet = false) {
   refreshBtn.classList.add('spinning');
   if (!quiet) feedLoading.style.display = 'flex';
 
-  const results = await Promise.allSettled(enabled.map(f => fetchFeed(f)));
-  let errors = 0;
-  const fresh = [];
+  const results = await fetchAllStaggered(enabled);
+  let errors = 0, staleFallbacks = 0;
   results.forEach((r, i) => {
-    if (r.status === 'fulfilled') fresh.push(...r.value);
-    else { console.warn(enabled[i].name, r.reason); errors++; }
+    const feed = enabled[i];
+    if (r.status === 'fulfilled') {
+      lastGoodByFeed.set(feed.name, r.value);
+    } else {
+      console.warn(feed.name, r.reason);
+      errors++;
+      if (lastGoodByFeed.has(feed.name)) staleFallbacks++;
+    }
   });
 
-  allItems = fresh.sort((a, b) => b.ts - a.ts);
+  allItems = enabled.flatMap(f => lastGoodByFeed.get(f.name) || []).sort((a, b) => b.ts - a.ts);
 
   feedLoading.style.display = 'none';
   refreshBtn.classList.remove('spinning');
@@ -287,7 +316,11 @@ async function refreshAll(quiet = false) {
   updateChart();
   updateHeader();
 
-  if (!quiet && errors) showToast(`${errors} feed(s) failed`);
+  if (!quiet && errors) {
+    showToast(staleFallbacks
+      ? `${errors} feed(s) failed — showing last known articles for ${staleFallbacks}`
+      : `${errors} feed(s) failed`, 4000);
+  }
 
   clearTimeout(refreshTimer);
   refreshTimer = setTimeout(() => refreshAll(true), REFRESH_MS);
@@ -669,6 +702,7 @@ function closeSettings() { overlay.classList.add('hidden'); }
 function deleteFeed(feed) {
   feeds    = feeds.filter(f => f.url !== feed.url);
   allItems = allItems.filter(it => it.source !== feed.name);
+  lastGoodByFeed.delete(feed.name);
 
   /* If the open article came from this feed, reset the article view */
   if (activeItemId && activeItemId.startsWith(feed.name + '-')) {
@@ -724,6 +758,7 @@ async function testAndAddFeed() {
     nameInput.value = '';
     urlInput.value  = '';
     showToast(`Added "${name}" — ${items.length} item${items.length !== 1 ? 's' : ''} found`);
+    lastGoodByFeed.set(newFeed.name, items);
     allItems = [...allItems, ...items].sort((a, b) => b.ts - a.ts);
     renderSourceChips();
     renderFeedList();
