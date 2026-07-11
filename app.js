@@ -341,7 +341,7 @@ function visibleItems() {
     if (activeFilter !== 'all' && it.source !== activeFilter) return false;
     if (activeTag !== 'all' && !it.tags.some(t => t.tag === activeTag)) return false;
     if (activePriority !== 'all' && it.priority !== activePriority) return false;
-    if (searchQuery && !it.title.toLowerCase().includes(searchQuery)) return false;
+    if (searchQuery && !it.title.toLowerCase().includes(searchQuery) && !it.desc.toLowerCase().includes(searchQuery)) return false;
     return true;
   });
 }
