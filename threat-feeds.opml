@@ -8,7 +8,7 @@
     <outline text="Cyber Threat Intelligence" title="Cyber Threat Intelligence">
 
       <!-- Core News -->
-      <outline type="rss" text="CISA Advisories"   title="CISA Advisories"   xmlUrl="https://www.cisa.gov/news.xml"                              htmlUrl="https://www.cisa.gov"/>
+      <outline type="rss" text="CISA Advisories"   title="CISA Advisories"   xmlUrl="https://www.cisa.gov/cybersecurity-advisories/all.xml"      htmlUrl="https://www.cisa.gov"/>
       <outline type="rss" text="Krebs on Security" title="Krebs on Security" xmlUrl="https://krebsonsecurity.com/feed/"                           htmlUrl="https://krebsonsecurity.com"/>
       <outline type="rss" text="Bleeping Computer" title="Bleeping Computer" xmlUrl="https://www.bleepingcomputer.com/feed/"                      htmlUrl="https://www.bleepingcomputer.com"/>
       <outline type="rss" text="The Hacker News"   title="The Hacker News"   xmlUrl="https://feeds.feedburner.com/TheHackersNews"                 htmlUrl="https://thehackernews.com"/>

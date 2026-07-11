@@ -3,7 +3,7 @@
 /* ── Feed definitions ── */
 const FEEDS = [
   // Core news feeds
-  { name: 'CISA Advisories',   url: 'https://www.cisa.gov/news.xml',                              color: '#5b8df0', initials: 'CI', enabled: true  },
+  { name: 'CISA Advisories',   url: 'https://www.cisa.gov/cybersecurity-advisories/all.xml',       color: '#5b8df0', initials: 'CI', enabled: true  },
   { name: 'Krebs on Security', url: 'https://krebsonsecurity.com/feed/',                           color: '#f7a650', initials: 'KS', enabled: true  },
   { name: 'Bleeping Computer', url: 'https://www.bleepingcomputer.com/feed/',                      color: '#4dbb7e', initials: 'BC', enabled: true  },
   { name: 'The Hacker News',   url: 'https://feeds.feedburner.com/TheHackersNews',                color: '#a855f7', initials: 'HN', enabled: true  },
