@@ -40,7 +40,7 @@ const TAG_RULES = [
   { tag: 'Phishing',      color: '#e8b400', bg: '#e8b40018',
     words: ['phishing','spear-phishing','smishing','vishing','social engineering','credential harvesting','business email compromise','bec'] },
   { tag: 'Malware',       color: '#ff6b6b', bg: '#ff6b6b18',
-    words: ['malware','backdoor','trojan','rootkit','worm','spyware','stealer','infostealer','rat ','keylogger','loader','dropper','botnet','cobalt strike'] },
+    words: ['malware','backdoor','trojan','rootkit','worm','spyware','stealer','infostealer','rat','keylogger','loader','dropper','botnet','cobalt strike'] },
   { tag: 'Data Breach',   color: '#00c2e0', bg: '#00c2e018',
     words: ['data breach','breach','leak','leaked','exposed','stolen data','exfiltrat','personal data','pii','records exposed'] },
   { tag: 'Critical Infra',color: '#ff9f43', bg: '#ff9f4318',
@@ -72,8 +72,9 @@ let activeTag     = 'all';   // threat tag filter
 let activePriority= 'all';   // priority filter
 let searchQuery   = '';
 let activeItemId  = null;
-let chartMode     = 'type';
-let chart         = null;
+let chartMode        = 'type';
+let chart            = null;
+let chartCurrentMode = null;
 let refreshTimer  = null;
 let feeds         = loadAllFeeds();
 let readIds       = loadReadIds();
@@ -164,9 +165,18 @@ function markAllRead() {
 }
 
 /* ── Threat tag detection ── */
+
+/* Multi-word phrases and prefix patterns (ending in '-') use substring matching.
+   Single words use word-boundary matching to prevent false positives like
+   'apt' in 'laptop'/'captcha', 'rat' in 'grateful', 'ics' in 'topics'. */
+function wordMatches(haystack, w) {
+  if (w.includes(' ') || w.endsWith('-')) return haystack.includes(w);
+  return new RegExp('\\b' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b').test(haystack);
+}
+
 function detectTags(title, desc) {
   const haystack = (title + ' ' + desc).toLowerCase();
-  return TAG_RULES.filter(r => r.words.some(w => haystack.includes(w)));
+  return TAG_RULES.filter(r => r.words.some(w => wordMatches(haystack, w)));
 }
 
 function getPriority(tags) {
@@ -231,14 +241,25 @@ function parseJsonItems(items, feed) {
     const desc    = stripHtml(rawDesc).slice(0, 600);
     const title   = item.title || '(no title)';
     const tags    = detectTags(title, desc);
-    const id      = `${feed.name}-${i}-${date.getTime()}`;
+    const link    = item.link || item.guid || '';
+    const id      = link.trim() ? `${feed.name}:${link.trim()}` : `${feed.name}-${i}-${date.getTime()}`;
     return {
       id, source: feed.name, color: feed.color, initials: feed.initials,
-      title, link: item.link || item.guid || '',
+      title, link,
       desc, date, ts: date.getTime(), tags, priority: getPriority(tags),
       read: readIds.has(id),
     };
   });
+}
+
+/* Prefer <link rel="alternate"> (article URL) over <link rel="self"> (feed URL).
+   Atom feeds put the article URL in rel=alternate; RSS feeds use <link> text content. */
+function pickXmlLink(node) {
+  const links = [...node.querySelectorAll('link')];
+  const pref  = links.find(l => (l.getAttribute('rel') || 'alternate') === 'alternate')
+             || links[0];
+  if (!pref) return '';
+  return pref.getAttribute('href') || pref.textContent?.trim() || '';
 }
 
 function parseXmlItems(xmlText, feed) {
@@ -251,11 +272,9 @@ function parseXmlItems(xmlText, feed) {
     const rawDesc = get('description', 'summary', 'content');
     const desc  = stripHtml(rawDesc).slice(0, 600);
     const title = get('title') || '(no title)';
-    const link  = node.querySelector('link')?.textContent?.trim()
-               || node.querySelector('link')?.getAttribute('href')
-               || get('guid') || '';
+    const link  = pickXmlLink(node) || get('guid', 'id') || '';
     const tags  = detectTags(title, desc);
-    const id    = `${feed.name}-${i}-${date.getTime()}`;
+    const id    = link.trim() ? `${feed.name}:${link.trim()}` : `${feed.name}-${i}-${date.getTime()}`;
     return {
       id, source: feed.name, color: feed.color, initials: feed.initials,
       title, link, desc, date, ts: date.getTime(), tags, priority: getPriority(tags),
@@ -268,12 +287,13 @@ function stripHtml(html) {
   return new DOMParser().parseFromString(html, 'text/html').body.textContent || '';
 }
 
-/* Only allow http(s) URLs through to an href — feed <link>/<guid> values are
-   untrusted and could otherwise carry a javascript: URI. */
+/* Only allow absolute http(s) URLs through to an href — feed <link>/<guid> values are
+   untrusted. Passing no base to URL() means relative paths throw and return null,
+   preventing a relative '/path' from resolving against the app origin. */
 function safeExternalUrl(url) {
   if (!url) return null;
   try {
-    const u = new URL(url, location.href);
+    const u = new URL(url);
     return (u.protocol === 'http:' || u.protocol === 'https:') ? u.href : null;
   } catch { return null; }
 }
@@ -282,12 +302,14 @@ function safeExternalUrl(url) {
 const FETCH_CONCURRENCY = 5;   // cap simultaneous proxy requests to avoid rate-limit bursts
 const FETCH_STAGGER_MS  = 200; // pause between a lane's fetches
 
-/* Runs feedList through fetchFeed with bounded concurrency + a per-lane stagger,
-   instead of firing every feed at once (which can burst-trip the free rss2json quota). */
+/* Runs feedList through fetchFeed with bounded concurrency + a per-lane stagger.
+   Each lane is offset by laneIdx * FETCH_STAGGER_MS before its first fetch so the
+   initial burst is spread out, not just the gap between sequential fetches within a lane. */
 async function fetchAllStaggered(feedList) {
   const results = new Array(feedList.length);
   let next = 0;
-  async function lane() {
+  async function lane(laneIdx) {
+    if (laneIdx > 0) await new Promise(r => setTimeout(r, laneIdx * FETCH_STAGGER_MS));
     while (next < feedList.length) {
       const i = next++;
       try { results[i] = { status: 'fulfilled', value: await fetchFeed(feedList[i]) }; }
@@ -295,7 +317,8 @@ async function fetchAllStaggered(feedList) {
       if (next < feedList.length) await new Promise(r => setTimeout(r, FETCH_STAGGER_MS));
     }
   }
-  await Promise.all(Array.from({ length: Math.min(FETCH_CONCURRENCY, feedList.length) }, lane));
+  const laneCount = Math.min(FETCH_CONCURRENCY, feedList.length);
+  await Promise.all(Array.from({ length: laneCount }, (_, i) => lane(i)));
   return results;
 }
 
@@ -542,25 +565,28 @@ function selectItem(item) {
   }
 
   const safeLink = safeExternalUrl(item.link);
-  articleLink.style.display = safeLink ? '' : 'none';
-  if (safeLink) articleLink.href = safeLink;
+  if (safeLink) {
+    articleLink.href = safeLink;
+    articleLink.style.display = '';
+  } else {
+    articleLink.removeAttribute('href');
+    articleLink.style.display = 'none';
+  }
 
-  /* Reading time */
-  const words = item.desc.split(/\s+/).length;
-  const mins  = Math.max(1, Math.ceil(words / 200));
-  readingTime.textContent = `${mins} min read`;
+  readingTime.textContent = '';
 }
 
 /* ── Charts ── */
 function updateChart() {
-  if (chart) { chart.destroy(); chart = null; }
+  if (chart && chartCurrentMode !== chartMode) { chart.destroy(); chart = null; }
   const light = document.documentElement.dataset.theme === 'light';
   Chart.defaults.color       = light ? '#6a6a90' : '#46465e';
   Chart.defaults.borderColor = light ? '#dde2f0' : '#1a1a2e';
   const ctx = $('threat-chart').getContext('2d');
-  if (chartMode === 'pie')  renderDonut(ctx, light);
+  if (chartMode === 'pie')       renderDonut(ctx, light);
   else if (chartMode === 'type') renderTypeDonut(ctx, light);
-  else renderLine(ctx);
+  else                           renderLine(ctx);
+  chartCurrentMode = chartMode;
 }
 
 function renderDonut(ctx, light) {
@@ -571,12 +597,23 @@ function renderDonut(ctx, light) {
     colorMap[it.source] = it.color;
   });
   const labels = Object.keys(counts);
+  const data   = labels.map(l => counts[l]);
+  const colors = labels.map(l => colorMap[l]);
+  const border = light ? '#f0f4f8' : '#0b0b14';
+  if (chart) {
+    chart.data.labels = labels;
+    chart.data.datasets[0].data = data;
+    chart.data.datasets[0].backgroundColor = colors;
+    chart.data.datasets[0].borderColor = border;
+    chart.options.plugins.legend.display = labels.length >= 2;
+    chart.update('none');
+    return;
+  }
   chart = new Chart(ctx, {
     type: 'doughnut',
     data: {
       labels,
-      datasets: [{ data: labels.map(l => counts[l]), backgroundColor: labels.map(l => colorMap[l]),
-        borderColor: light ? '#f0f4f8' : '#0b0b14', borderWidth: 2, hoverOffset: 6 }],
+      datasets: [{ data, backgroundColor: colors, borderColor: border, borderWidth: 2, hoverOffset: 6 }],
     },
     options: {
       responsive: true, maintainAspectRatio: false, cutout: '64%',
@@ -591,8 +628,7 @@ function renderDonut(ctx, light) {
 
 function renderTypeDonut(ctx, light) {
   const items = visibleItems();
-  const counts = {};
-  const colorMap = {};
+  const counts = {}, colorMap = {};
   items.forEach(it => {
     it.tags.forEach(t => {
       counts[t.tag] = (counts[t.tag] || 0) + 1;
@@ -604,12 +640,23 @@ function renderTypeDonut(ctx, light) {
     }
   });
   const labels = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+  const data   = labels.map(l => counts[l]);
+  const colors = labels.map(l => colorMap[l]);
+  const border = light ? '#f0f4f8' : '#0b0b14';
+  if (chart) {
+    chart.data.labels = labels;
+    chart.data.datasets[0].data = data;
+    chart.data.datasets[0].backgroundColor = colors;
+    chart.data.datasets[0].borderColor = border;
+    chart.options.plugins.legend.display = labels.length >= 2;
+    chart.update('none');
+    return;
+  }
   chart = new Chart(ctx, {
     type: 'doughnut',
     data: {
       labels,
-      datasets: [{ data: labels.map(l => counts[l]), backgroundColor: labels.map(l => colorMap[l]),
-        borderColor: light ? '#f0f4f8' : '#0b0b14', borderWidth: 2, hoverOffset: 6 }],
+      datasets: [{ data, backgroundColor: colors, borderColor: border, borderWidth: 2, hoverOffset: 6 }],
     },
     options: {
       responsive: true, maintainAspectRatio: false, cutout: '64%',
@@ -719,12 +766,15 @@ function openSettings() {
 function closeSettings() { overlay.classList.add('hidden'); }
 
 function deleteFeed(feed) {
+  /* Check before filtering whether the open article belongs to this feed */
+  const activeIsFromFeed = activeItemId !== null &&
+    allItems.some(it => it.id === activeItemId && it.source === feed.name);
+
   feeds    = feeds.filter(f => f.url !== feed.url);
   allItems = allItems.filter(it => it.source !== feed.name);
   lastGoodByFeed.delete(feed.name);
 
-  /* If the open article came from this feed, reset the article view */
-  if (activeItemId && activeItemId.startsWith(feed.name + '-')) {
+  if (activeIsFromFeed) {
     articleContent.hidden = true;
     articleEmpty.hidden   = false;
     activeItemId = null;
@@ -827,12 +877,13 @@ ${items}
   </body>
 </opml>`;
 
-  const blob = new Blob([opml], { type: 'text/x-opml' });
+  const blob   = new Blob([opml], { type: 'text/x-opml' });
+  const objUrl = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
+  a.href = objUrl;
   a.download = 'threat-feeds.opml';
   a.click();
-  URL.revokeObjectURL(a.href);
+  setTimeout(() => URL.revokeObjectURL(objUrl), 1000);
   showToast('Exported threat-feeds.opml');
 }
 
