@@ -2,7 +2,7 @@
 
 A Progressive Web App (PWA) that aggregates 22 cyber threat intelligence RSS feeds into a single, real-time dashboard.
 
-![Version](https://img.shields.io/badge/version-v0.1.0-blue) ![License](https://img.shields.io/badge/license-MIT-green)
+![Version](https://img.shields.io/badge/version-v0.1.1-blue) ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Features
 
@@ -84,6 +84,21 @@ Open the **Settings** gear icon to enable/disable any feed. Use the **Add Custom
 Custom feeds are stored in `localStorage` and persist across sessions.
 
 ## Changelog
+
+### v0.1.1 (2026-09-12)
+
+Bug fixes from a multi-agent Claude Code review pass:
+
+- **Stable article IDs** — IDs are now derived from each article's link/guid rather than its position in the feed response. Previously, a feed prepending one new item would shift every existing item's index, silently marking all previously-read stories as unread again.
+- **Atom feed link resolution** — `<link rel="self">` (the feed's own subscription URL) is no longer picked over `<link rel="alternate">` (the article URL). Affects Atom feeds such as Google Project Zero and VirusTotal; article links previously navigated to the feed URL instead of the article.
+- **Tag false-positive fix** — threat-tag keyword matching now uses word-boundary matching for single-token words. Previously, `apt` matched "l**apt**op" and "c**apt**cha"; `ics` matched "top**ics**"; `rce` matched "sour**ce**"; `rat` matched "grate**ful**". Multi-word phrases (e.g. "nation-state", "cobalt strike") continue to use substring matching.
+- **Custom feed deletion** — the check for whether the open article belongs to a deleted feed now uses an exact source-name comparison instead of a string prefix, which could match articles from a different feed with a similar name (e.g. deleting "Foo" would incorrectly clear the panel for items from "Foo-Extra").
+- **Fetch stagger** — all five fetch lanes were firing simultaneously on startup despite the code comment stating they should be spread out. Each lane now starts offset by `laneIdx × 200 ms` to avoid bursting the free rss2json proxy quota.
+- **Stale article link** — when a feed item has no valid URL, the "Read Full Story" button is hidden but its `href` was retaining the previous item's URL. The `href` attribute is now removed, preventing screen readers or keyboard users from activating the wrong link.
+- **Relative URL injection** — `safeExternalUrl` now rejects relative paths from feed items (e.g. `/logout`) that previously resolved against the app's own origin and passed the http/https check.
+- **Chart flicker** — the By Source and By Threat donut charts now update data in place (`chart.update('none')`) instead of destroying and recreating the Chart.js instance on every filter change or search keystroke. The chart is only recreated when switching between chart modes.
+- **OPML download race** — `URL.revokeObjectURL` is now deferred by 1 second after `a.click()` so the browser has time to queue the download before the object URL is released.
+- Removed the misleading per-article reading-time estimate — descriptions are always truncated to 600 characters in the proxy response, making the estimate always "1 min read" regardless of actual article length.
 
 ### v0.1.0 (2026-07-11)
 

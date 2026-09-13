@@ -49,7 +49,7 @@ const TAG_RULES = [
     words: ['ddos','denial of service','distributed denial','mirai','botnet attack'] },
 ];
 
-const VERSION     = 'v0.1.0';
+const VERSION     = 'v0.1.1';
 const REFRESH_MS  = 15 * 60 * 1000;
 const STORE_KEY   = 'ctt-v2';
 const CUSTOM_KEY  = 'ctt-custom';
