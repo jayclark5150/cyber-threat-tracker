@@ -1,4 +1,4 @@
-const CACHE = 'ctt-v9';
+const CACHE = 'ctt-v10';
 const ASSETS = [
   './',
   './index.html',
@@ -57,5 +57,21 @@ self.addEventListener('fetch', e => {
   /* Cache-first for app shell */
   e.respondWith(
     caches.match(e.request).then(hit => hit || fetch(e.request))
+  );
+});
+
+/* Desktop alert clicked: focus the app and open the story */
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const id = e.notification.data?.id;
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      const client = list[0];
+      if (client) {
+        client.postMessage({ type: 'open-item', id });
+        return client.focus();
+      }
+      return self.clients.openWindow('./');
+    })
   );
 });

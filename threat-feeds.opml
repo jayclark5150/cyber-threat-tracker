@@ -24,6 +24,9 @@
         <outline type="rss" text="Help Net Security" title="Help Net Security" xmlUrl="https://www.helpnetsecurity.com/feed/"/>
         <outline type="rss" text="Cybersecurity Dive" title="Cybersecurity Dive" xmlUrl="https://www.cybersecuritydive.com/feeds/news/"/>
         <outline type="rss" text="Schneier on Security" title="Schneier on Security" xmlUrl="https://www.schneier.com/feed/atom/"/>
+        <outline type="rss" text="The Register" title="The Register" xmlUrl="https://www.theregister.com/security/headlines.atom"/>
+        <outline type="rss" text="Wired Security" title="Wired Security" xmlUrl="https://www.wired.com/feed/category/security/latest/rss"/>
+        <outline type="rss" text="Troy Hunt" title="Troy Hunt" xmlUrl="https://www.troyhunt.com/rss/"/>
       </outline>
       <outline text="Threat Intel" title="Threat Intel">
         <outline type="rss" text="Cisco Talos" title="Cisco Talos" xmlUrl="https://blog.talosintelligence.com/rss/"/>
@@ -46,10 +49,18 @@
         <outline type="rss" text="ANY.RUN" title="ANY.RUN" xmlUrl="https://any.run/cybersecurity-blog/feed/"/>
         <outline type="rss" text="GreyNoise" title="GreyNoise" xmlUrl="https://www.greynoise.io/blog/rss.xml"/>
         <outline type="rss" text="VirusTotal" title="VirusTotal" xmlUrl="https://blog.virustotal.com/feeds/posts/default"/>
+        <outline type="rss" text="Google Threat Intel" title="Google Threat Intel" xmlUrl="https://cloudblog.withgoogle.com/topics/threat-intelligence/rss/"/>
+        <outline type="rss" text="GitHub Security" title="GitHub Security" xmlUrl="https://github.blog/security/feed/"/>
+        <outline type="rss" text="AWS Security" title="AWS Security" xmlUrl="https://aws.amazon.com/blogs/security/feed/"/>
       </outline>
       <outline text="Vulnerability Research" title="Vulnerability Research">
         <outline type="rss" text="Google Proj Zero" title="Google Proj Zero" xmlUrl="https://projectzero.google/feed.xml"/>
         <outline type="rss" text="Zero Day Initiative" title="Zero Day Initiative" xmlUrl="https://www.zerodayinitiative.com/rss/published/"/>
+        <outline type="rss" text="Exploit-DB" title="Exploit-DB" xmlUrl="https://www.exploit-db.com/rss.xml"/>
+      </outline>
+      <outline text="Vendor Advisories" title="Vendor Advisories">
+        <outline type="rss" text="Cisco PSIRT" title="Cisco PSIRT" xmlUrl="https://sec.cloudapps.cisco.com/security/center/psirtrss20/CiscoSecurityAdvisory.xml"/>
+        <outline type="rss" text="Fortinet PSIRT" title="Fortinet PSIRT" xmlUrl="https://filestore.fortinet.com/fortiguard/rss/ir.xml"/>
       </outline>
       <outline text="Ransomware" title="Ransomware">
         <outline type="rss" text="ransomware.live" title="ransomware.live" xmlUrl="https://www.ransomware.live/rss.xml"/>

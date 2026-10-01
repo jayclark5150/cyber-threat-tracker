@@ -12,7 +12,12 @@ Usage:
     python3 scripts/build_feeds.py [--out feeds.json] [--previous URL_OR_PATH]
 
 --previous points at the last published feeds.json; a feed that fails this run keeps
-its previous items (marked ok: false) instead of disappearing. Standard library only.
+its previous items (marked ok: false) instead of disappearing, and `failingSince` records
+when the current run of failures started (used by scripts/check_feed_health.py).
+
+Each feed entry: {ok, fetched (last successful fetch, ms), items, error?, failingSince?}.
+Top level also carries `kevIds`: every CVE in CISA's KEV catalog, so the app can flag any
+story mentioning an exploited CVE. Standard library only.
 """
 
 import argparse
@@ -146,15 +151,20 @@ def parse_xml(body: bytes, fetched_ms: int) -> list[dict]:
             "title": strip_html(_child_text(node, "title")) or "(no title)",
             "link": link,
             "desc": strip_html(raw_desc)[:DESC_CHARS],
-            "ts": ts or fetched_ms,
+            # Some feeds mislabel time zones (e.g. UTC times marked -0700); never show the future
+            "ts": min(ts, fetched_ms) if ts else fetched_ms,
         })
     return items
+
+
+KEV_IDS: list[str] = []  # filled by parse_kev; every CVE in the catalog
 
 
 def parse_kev(body: bytes, fetched_ms: int) -> list[dict]:
     """CISA Known Exploited Vulnerabilities catalog (JSON) -> items."""
     data = json.loads(body)
     vulns = sorted(data.get("vulnerabilities", []), key=lambda v: v.get("dateAdded", ""), reverse=True)
+    KEV_IDS[:] = sorted({v["cveID"].upper() for v in vulns if v.get("cveID")})
     items = []
     for v in vulns[:MAX_ITEMS]:
         cve = v.get("cveID", "")
@@ -199,7 +209,7 @@ def load_previous(src: str | None) -> dict:
             raw = fetch(src)
         else:
             raw = Path(src).read_bytes()
-        return json.loads(raw).get("feeds", {})
+        return json.loads(raw)
     except Exception as e:
         print(f"note: no previous snapshot loaded ({e})", file=sys.stderr)
         return {}
@@ -212,7 +222,9 @@ def main() -> int:
     args = ap.parse_args()
 
     feeds = load_feed_list()
-    previous = load_previous(args.previous)
+    previous_snapshot = load_previous(args.previous)
+    previous = previous_snapshot.get("feeds", {})
+    run_ms = int(time.time() * 1000)
     out = {}
 
     with cf.ThreadPoolExecutor(max_workers=12) as ex:
@@ -226,6 +238,7 @@ def main() -> int:
                 err = f"{type(e).__name__}: {e}"[:200]
                 prev = previous.get(feed["url"], {})
                 out[feed["url"]] = {"ok": False, "error": err, "fetched": prev.get("fetched"),
+                                    "failingSince": prev.get("failingSince") or run_ms,
                                     "items": prev.get("items", [])}
                 print(f"FAIL  {feed['name']:<24} {err}  (kept {len(prev.get('items', []))} previous items)")
 
@@ -233,6 +246,7 @@ def main() -> int:
         "version": 1,
         "generated": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
         "feeds": {f["url"]: out[f["url"]] for f in feeds},  # keep app.js order
+        "kevIds": KEV_IDS or previous_snapshot.get("kevIds", []),
     }
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     Path(args.out).write_text(json.dumps(snapshot, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")

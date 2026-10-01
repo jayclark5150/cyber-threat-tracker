@@ -679,3 +679,31 @@ body {
   /* Item count hidden on mobile (space) */
   #item-count { display: none; }
 }
+
+/* ── v0.3.0: exploited CVEs, time filter, feed health, alerts, OPML import ── */
+.exploited-chip.active { color: #ff4757; background: #ff475718; border-color: #ff475730; }
+.time-chip.active      { color: var(--accent-text); background: var(--accent-dim); border-color: var(--accent-border); }
+.exploited-pill        { color: #fff; background: #d50000; }
+[data-theme="light"] .exploited-pill { color: #fff; border-color: #d50000; }
+
+.article-cves { display: flex; gap: 6px; flex-wrap: wrap; margin: -6px 0 14px; }
+.article-cves[hidden] { display: none; }
+.cve-chip {
+  font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums;
+  padding: 3px 8px; border-radius: 4px; text-decoration: none;
+  color: var(--accent-text); background: var(--accent-dim); border: 1px solid var(--accent-border);
+}
+.cve-chip:hover    { text-decoration: underline; }
+.cve-chip.exploited { color: #ff4757; background: #ff475718; border-color: #ff475750; }
+
+.settings-head { display: flex; flex-direction: column; gap: 6px; padding-bottom: 6px; margin-bottom: 4px; border-bottom: 1px solid var(--border); }
+.health-summary { font-size: 12px; padding: 7px 12px; border-radius: 7px; line-height: 1.4; }
+.health-summary.ok   { color: #4dbb7e; background: #4dbb7e14; }
+.health-summary.fail { color: #ff8c00; background: #ff8c0014; }
+.source-info   { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.source-info .source-name { flex: none; }
+.source-status { font-size: 10.5px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.source-status:empty { display: none; }
+.source-status.ok   { color: #4dbb7e; }
+.source-status.fail { color: #ff8c00; cursor: help; }
+.import-row { margin-top: 9px; }

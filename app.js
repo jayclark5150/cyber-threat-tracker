@@ -21,6 +21,9 @@ const FEEDS = /*FEEDS:START*/[
   {"name": "Help Net Security", "url": "https://www.helpnetsecurity.com/feed/", "color": "#29b6f6", "initials": "HS", "group": "News", "enabled": true},
   {"name": "Cybersecurity Dive", "url": "https://www.cybersecuritydive.com/feeds/news/", "color": "#66bb6a", "initials": "CD", "group": "News", "enabled": true, "cors": true},
   {"name": "Schneier on Security", "url": "https://www.schneier.com/feed/atom/", "color": "#9e9e9e", "initials": "BS", "group": "News", "enabled": true},
+  {"name": "The Register", "url": "https://www.theregister.com/security/headlines.atom", "color": "#e53935", "initials": "RG", "group": "News", "enabled": true, "cors": true},
+  {"name": "Wired Security", "url": "https://www.wired.com/feed/category/security/latest/rss", "color": "#eeeeee", "initials": "WI", "group": "News", "enabled": true, "cors": true},
+  {"name": "Troy Hunt", "url": "https://www.troyhunt.com/rss/", "color": "#1e88e5", "initials": "TH", "group": "News", "enabled": true},
   {"name": "Cisco Talos", "url": "https://blog.talosintelligence.com/rss/", "color": "#ff7043", "initials": "CT", "group": "Threat Intel", "enabled": true},
   {"name": "SANS ISC", "url": "https://isc.sans.edu/rssfeed_full.xml", "color": "#ffd600", "initials": "SI", "group": "Threat Intel", "enabled": true},
   {"name": "Securelist", "url": "https://securelist.com/feed/", "color": "#ef5350", "initials": "SL", "group": "Threat Intel", "enabled": true, "cors": true},
@@ -41,8 +44,14 @@ const FEEDS = /*FEEDS:START*/[
   {"name": "ANY.RUN", "url": "https://any.run/cybersecurity-blog/feed/", "color": "#00e5ff", "initials": "AR", "group": "Threat Intel", "enabled": true, "cors": true},
   {"name": "GreyNoise", "url": "https://www.greynoise.io/blog/rss.xml", "color": "#78909c", "initials": "GN", "group": "Threat Intel", "enabled": true},
   {"name": "VirusTotal", "url": "https://blog.virustotal.com/feeds/posts/default", "color": "#26a69a", "initials": "VT", "group": "Threat Intel", "enabled": true},
+  {"name": "Google Threat Intel", "url": "https://cloudblog.withgoogle.com/topics/threat-intelligence/rss/", "color": "#4285f4", "initials": "GT", "group": "Threat Intel", "enabled": true},
+  {"name": "GitHub Security", "url": "https://github.blog/security/feed/", "color": "#8b949e", "initials": "GH", "group": "Threat Intel", "enabled": true, "cors": true},
+  {"name": "AWS Security", "url": "https://aws.amazon.com/blogs/security/feed/", "color": "#ff9900", "initials": "AW", "group": "Threat Intel", "enabled": true},
   {"name": "Google Proj Zero", "url": "https://projectzero.google/feed.xml", "color": "#ffca28", "initials": "G0", "group": "Vulnerability Research", "enabled": true},
   {"name": "Zero Day Initiative", "url": "https://www.zerodayinitiative.com/rss/published/", "color": "#fdd835", "initials": "ZD", "group": "Vulnerability Research", "enabled": true},
+  {"name": "Exploit-DB", "url": "https://www.exploit-db.com/rss.xml", "color": "#ec6c1f", "initials": "ED", "group": "Vulnerability Research", "enabled": true},
+  {"name": "Cisco PSIRT", "url": "https://sec.cloudapps.cisco.com/security/center/psirtrss20/CiscoSecurityAdvisory.xml", "color": "#049fd9", "initials": "CS", "group": "Vendor Advisories", "enabled": true, "cors": true},
+  {"name": "Fortinet PSIRT", "url": "https://filestore.fortinet.com/fortiguard/rss/ir.xml", "color": "#da291c", "initials": "FT", "group": "Vendor Advisories", "enabled": true, "cors": true},
   {"name": "ransomware.live", "url": "https://www.ransomware.live/rss.xml", "color": "#ad1457", "initials": "RL", "group": "Ransomware", "enabled": false}
 ]/*FEEDS:END*/;
 
@@ -66,7 +75,7 @@ const TAG_RULES = [
     words: ['ddos','denial of service','distributed denial','mirai','botnet attack'] },
 ];
 
-const VERSION     = 'v0.2.2';
+const VERSION     = 'v0.3.0';
 const REPO_URL    = 'https://github.com/jayclark5150/cyber-threat-tracker';
 const REFRESH_MS       = 5 * 60 * 1000;   // auto-refresh when the feeds.json snapshot is fresh
 const REFRESH_SLOW_MS  = 15 * 60 * 1000;  // auto-refresh when falling back to live proxy fetches
@@ -75,6 +84,9 @@ const SNAPSHOT_URL     = 'feeds.json';    // built every 15 min by .github/workf
 const SNAPSHOT_MAX_AGE_MS = 60 * 60 * 1000; // older than this = pipeline stalled, fetch feeds live
 const MAX_ITEMS_PER_FEED  = 25;
 const CACHE_KEY   = 'ctt-cache';
+const NOTIFY_KEY  = 'ctt-notify';
+const TIME_WINDOWS = { '24h': 24 * 3600 * 1000, '7d': 7 * 24 * 3600 * 1000 };
+const MAX_IMPORT  = 30;   // custom feeds are fetched live through the proxy, so cap OPML imports
 const STORE_KEY   = 'ctt-v2';
 const CUSTOM_KEY  = 'ctt-custom';
 const READ_KEY    = 'ctt-read';
@@ -94,6 +106,10 @@ let allItems      = [];
 let activeFilter  = 'all';   // source filter
 let activeTag     = 'all';   // threat tag filter
 let activePriority= 'all';   // priority filter
+let activeTime    = 'all';   // time window filter: 'all' | '24h' | '7d'
+let kevSet        = new Set(); // every CVE in CISA's KEV catalog (from feeds.json kevIds)
+let feedStatus    = new Map(); // feed name -> { ok, error, fetched, failingSince }
+let knownIds      = null;      // story ids already seen; null until the first load (no alerts then)
 let searchQuery   = '';
 let activeItemId  = null;
 let chartMode        = 'type';
@@ -122,6 +138,7 @@ const articleDate    = $('article-date');
 const articlePriority= $('article-priority-badge');
 const articleTitle   = $('article-title');
 const articleTagsRow = $('article-tags-row');
+const articleCves    = $('article-cves');
 const aiSummaryBox   = $('ai-summary-box');
 const aiSummaryText  = $('ai-summary-text');
 const articleDesc    = $('article-desc');
@@ -313,7 +330,10 @@ function makeItem(feed, raw, i) {
   const title = raw.title || '(no title)';
   const desc  = raw.desc || '';
   const link  = (raw.link || '').trim();
-  const ts    = Number.isFinite(raw.ts) ? raw.ts : Date.now();
+  // Some feeds mislabel time zones, so never show a story as published in the future
+  const ts    = Number.isFinite(raw.ts) ? Math.min(raw.ts, Date.now()) : Date.now();
+  const cves  = extractCves(title + ' ' + desc);
+  const exploited = !raw.kev && cves.some(c => kevSet.has(c));
   let tags    = detectTags(title, desc);
   if (raw.kev) {
     const want = ['Vulnerability', ...(raw.ransomware ? ['Ransomware'] : [])];
@@ -323,10 +343,15 @@ function makeItem(feed, raw, i) {
   return {
     id, source: feed.name, color: feed.color, initials: feed.initials,
     title, link, desc, date: new Date(ts), ts, tags,
-    priority: raw.kev ? 'critical' : getPriority(tags),
-    kev: !!raw.kev, ransomware: !!raw.ransomware,
+    // KEV entries and stories about a KEV-listed CVE are confirmed exploited in the wild
+    priority: raw.kev || exploited ? 'critical' : getPriority(tags),
+    kev: !!raw.kev, ransomware: !!raw.ransomware, cves, exploited,
     read: readIds.has(id),
   };
+}
+
+function extractCves(text) {
+  return [...new Set((text.match(/\bCVE-\d{4}-\d{4,7}\b/gi) || []).map(c => c.toUpperCase()))];
 }
 
 function makeItems(feed, raws) {
@@ -448,7 +473,7 @@ function saveCache() {
     out[name] = items.map(({ title, link, desc, ts, kev, ransomware }) =>
       ({ title, link, desc, ts, ...(kev && { kev }), ...(ransomware && { ransomware }) }));
   });
-  safeSetItem(CACHE_KEY, JSON.stringify({ savedAt: lastRefreshAt, feeds: out }));
+  safeSetItem(CACHE_KEY, JSON.stringify({ savedAt: lastRefreshAt, kevIds: [...kevSet], feeds: out }));
 }
 
 /* Show the articles from the previous visit immediately, before any network request. */
@@ -456,9 +481,11 @@ function loadCache() {
   try {
     const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
     if (!c || !c.feeds) return false;
+    if (c.kevIds) kevSet = new Set(c.kevIds);
     feeds.forEach(f => { if (c.feeds[f.name]) lastGoodByFeed.set(f.name, makeItems(f, c.feeds[f.name])); });
     lastRefreshAt = c.savedAt || 0;
     commitItems(buildItems(), false);
+    knownIds = new Set(allItems.map(i => i.id));
     return allItems.length > 0;
   } catch { return false; }
 }
@@ -479,8 +506,11 @@ async function refreshAll(background = false) {
     const fresh = !!snap && Date.now() - Date.parse(snap.generated) < SNAPSHOT_MAX_AGE_MS;
     const live  = [];
 
+    if (snap?.kevIds?.length) kevSet = new Set(snap.kevIds);
+
     enabled.forEach(feed => {
       const entry = snap?.feeds[feed.url];
+      if (entry) feedStatus.set(feed.name, { ok: entry.ok, error: entry.error, fetched: entry.fetched, failingSince: entry.failingSince });
       if (entry?.items?.length && (fresh && entry.ok || !lastGoodByFeed.has(feed.name))) {
         lastGoodByFeed.set(feed.name, makeItems(feed, entry.items));
       }
@@ -494,9 +524,13 @@ async function refreshAll(background = false) {
     await fetchAllStaggered(live, (feed, r) => {
       if (r.status === 'fulfilled') {
         lastGoodByFeed.set(feed.name, makeItems(feed, r.value));
+        feedStatus.set(feed.name, { ok: true, fetched: Date.now() });
         scheduleRender(background);
       } else {
         console.warn(feed.name, r.reason);
+        const prev = feedStatus.get(feed.name);
+        feedStatus.set(feed.name, { ok: false, error: r.reason?.message || String(r.reason),
+          fetched: prev?.fetched, failingSince: prev?.ok === false ? prev.failingSince ?? Date.now() : Date.now() });
         errors++;
         if (lastGoodByFeed.has(feed.name)) staleFallbacks++;
       }
@@ -504,7 +538,10 @@ async function refreshAll(background = false) {
 
     lastRefreshAt = fresh ? Date.parse(snap.generated) : Date.now();
     lastCheckedAt = Date.now();
-    commitItems(buildItems(), background);
+    const finalItems = buildItems();
+    commitItems(finalItems, background);
+    if (knownIds) notifyNewCritical(finalItems.filter(i => !knownIds.has(i.id)));
+    knownIds = new Set([...(knownIds || []), ...finalItems.map(i => i.id)]);
     saveCache();
     if (customCorsChanged) { customCorsChanged = false; saveAllFeeds(); }
 
@@ -538,7 +575,9 @@ function updateHeader() {
 function visibleItems() {
   return allItems.filter(it => {
     if (activeFilter !== 'all' && it.source !== activeFilter) return false;
-    if (activeTag !== 'all' && !it.tags.some(t => t.tag === activeTag)) return false;
+    if (activeTag === 'Exploited') { if (!it.kev && !it.exploited) return false; }
+    else if (activeTag !== 'all' && !it.tags.some(t => t.tag === activeTag)) return false;
+    if (activeTime !== 'all' && Date.now() - it.ts > TIME_WINDOWS[activeTime]) return false;
     if (activePriority !== 'all' && it.priority !== activePriority) return false;
     if (searchQuery && !it.title.toLowerCase().includes(searchQuery) && !it.desc.toLowerCase().includes(searchQuery)) return false;
     return true;
@@ -601,6 +640,19 @@ function initPriorityBar() {
   });
 }
 
+/* ── Time window bar (24h / 7 days; click again to clear) ── */
+function initTimeBar() {
+  tagBar.querySelectorAll('.time-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const val = chip.dataset.time;
+      activeTime = activeTime === val ? 'all' : val;
+      tagBar.querySelectorAll('.time-chip').forEach(c => c.classList.remove('active'));
+      if (activeTime !== 'all') chip.classList.add('active');
+      renderFeedList(); updateChart(); updateHeader();
+    });
+  });
+}
+
 /* ── Feed list ── */
 function renderFeedList() {
   const items = visibleItems();
@@ -649,6 +701,13 @@ function renderFeedList() {
     /* Tags */
     const tagsRow = document.createElement('div');
     tagsRow.className = 'feed-item-tags';
+    if (item.exploited) {
+      const pill = document.createElement('span');
+      pill.className = 'threat-pill exploited-pill';
+      pill.textContent = 'Exploited';
+      pill.title = "Mentions a CVE in CISA's Known Exploited Vulnerabilities catalog";
+      tagsRow.appendChild(pill);
+    }
     item.tags.slice(0, 3).forEach(t => {
       const pill = document.createElement('span');
       pill.className = 'threat-pill';
@@ -659,7 +718,7 @@ function renderFeedList() {
     });
 
     el.append(meta, title);
-    if (item.tags.length) el.appendChild(tagsRow);
+    if (tagsRow.childElementCount) el.appendChild(tagsRow);
     el.addEventListener('click', () => selectItem(item));
     feedItemsEl.appendChild(el);
   });
@@ -712,6 +771,21 @@ function selectItem(item) {
     pill.style.background = t.bg;
     articleTagsRow.appendChild(pill);
   });
+
+  /* CVEs mentioned, linked to NVD; KEV-listed ones flagged as exploited */
+  articleCves.innerHTML = '';
+  item.cves.slice(0, 12).forEach(cve => {
+    const a = document.createElement('a');
+    const inKev = kevSet.has(cve);
+    a.className = 'cve-chip' + (inKev ? ' exploited' : '');
+    a.href = `https://nvd.nist.gov/vuln/detail/${cve}`;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.textContent = inKev ? `${cve} · Exploited` : cve;
+    a.title = inKev ? "In CISA's Known Exploited Vulnerabilities catalog — open in NVD" : 'Open in NVD';
+    articleCves.appendChild(a);
+  });
+  articleCves.hidden = !item.cves.length;
 
   /* AI summary box */
   if (item.desc && item.desc.length > 80) {
@@ -875,8 +949,47 @@ function renderLine(ctx) {
 }
 
 /* ── Settings modal ── */
+function feedStatusLine(feed) {
+  const st = feedStatus.get(feed.name);
+  if (!st) return { text: feed.enabled ? 'Not checked yet' : '', cls: '' };
+  if (st.ok) return { text: `✓ Updated ${relTime(new Date(st.fetched || Date.now()))}`, cls: 'ok' };
+  const since = st.failingSince ? `Failing since ${relTime(new Date(st.failingSince))}` : 'Last fetch failed';
+  return { text: `✗ ${since}${st.fetched ? ` · last worked ${relTime(new Date(st.fetched))}` : ''}`, cls: 'fail', title: st.error || '' };
+}
+
+function renderSettingsHeader() {
+  const head = document.createElement('div');
+  head.className = 'settings-head';
+
+  const enabled = feeds.filter(f => f.enabled);
+  const failing = enabled.filter(f => feedStatus.get(f.name)?.ok === false);
+  const health = document.createElement('div');
+  health.className = 'health-summary ' + (failing.length ? 'fail' : 'ok');
+  health.textContent = failing.length
+    ? `${failing.length} of ${enabled.length} enabled feeds failing: ${failing.map(f => f.name).join(', ')}`
+    : `All ${enabled.length} enabled feeds healthy`;
+
+  const alerts = document.createElement('div');
+  alerts.className = 'source-row';
+  const label = document.createElement('span');
+  label.className = 'source-name';
+  label.textContent = 'Desktop alerts for new Critical stories';
+  const tog = document.createElement('button');
+  const on = notifyEnabled();
+  tog.className = 'source-toggle' + (on ? ' on' : '');
+  tog.setAttribute('role', 'switch');
+  tog.setAttribute('aria-checked', String(on));
+  tog.setAttribute('aria-label', 'Desktop alerts for new Critical stories');
+  tog.addEventListener('click', () => toggleNotifications(tog));
+  alerts.append(label, tog);
+
+  head.append(health, alerts);
+  return head;
+}
+
 function openSettings() {
   sourceList.innerHTML = '';
+  sourceList.appendChild(renderSettingsHeader());
   feeds.forEach((feed, idx) => {
     const row = document.createElement('div');
     row.className = 'source-row';
@@ -906,7 +1019,16 @@ function openSettings() {
       tog.setAttribute('aria-checked', String(on));
     });
 
-    row.append(dot, nameEl, tog);
+    const info = document.createElement('div');
+    info.className = 'source-info';
+    const status = feedStatusLine(feed);
+    const statusEl = document.createElement('span');
+    statusEl.className = 'source-status ' + status.cls;
+    statusEl.textContent = status.text;
+    if (status.title) statusEl.title = status.title;
+    info.append(nameEl, statusEl);
+
+    row.append(dot, info, tog);
 
     if (feed.custom) {
       const sug = document.createElement('button');
@@ -1014,6 +1136,86 @@ async function testAndAddFeed() {
   }
 }
 
+/* ── Desktop alerts ── */
+function notifyEnabled() {
+  try { return localStorage.getItem(NOTIFY_KEY) === '1' && 'Notification' in window && Notification.permission === 'granted'; }
+  catch { return false; }
+}
+
+async function toggleNotifications(tog) {
+  let on = !tog.classList.contains('on');
+  if (on) {
+    if (!('Notification' in window)) { showToast('This browser does not support notifications'); return; }
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { showToast('Notifications are blocked — allow them in your browser\'s site settings', 4500); on = false; }
+  }
+  safeSetItem(NOTIFY_KEY, on ? '1' : '0');
+  tog.classList.toggle('on', on);
+  tog.setAttribute('aria-checked', String(on));
+  if (on) showToast("You'll be alerted about new Critical stories while the app is open in the background", 4500);
+}
+
+/* Alert about new Critical stories (from the last 24h) found by a refresh,
+   but only when the user isn't already looking at the app. */
+function notifyNewCritical(newItems) {
+  if (!notifyEnabled() || document.hasFocus()) return;
+  const fresh = newItems.filter(i => i.priority === 'critical' && Date.now() - i.ts < TIME_WINDOWS['24h']);
+  if (!fresh.length) return;
+  const title = fresh.length === 1 ? `Critical · ${fresh[0].source}` : `${fresh.length} new Critical stories`;
+  const opts  = { body: fresh.slice(0, 3).map(i => i.title).join('\n'), icon: 'icons/icon-192.png',
+                  tag: 'ctt-critical', data: { id: fresh[0].id } };
+  /* Service-worker notifications also work on Android, where new Notification() throws */
+  const pageNotify = () => {
+    try {
+      const n = new Notification(title, opts);
+      n.onclick = () => { window.focus(); openItemById(opts.data.id); n.close(); };
+    } catch (e) { console.warn('notification failed', e); }
+  };
+  if (navigator.serviceWorker) {
+    navigator.serviceWorker.getRegistration()
+      .then(reg => reg ? reg.showNotification(title, opts) : pageNotify())
+      .catch(pageNotify);
+  } else pageNotify();
+}
+
+function openItemById(id) {
+  if (pendingItems?.some(i => i.id === id)) commitItems(pendingItems, false);
+  const item = allItems.find(i => i.id === id);
+  if (!item) return;
+  selectItem(item);
+  feedItemsEl.querySelector(`[data-id="${CSS.escape(id)}"]`)?.scrollIntoView({ block: 'nearest' });
+}
+
+/* ── OPML import ── */
+async function importOpml(file) {
+  let doc;
+  try { doc = new DOMParser().parseFromString(await file.text(), 'text/xml'); }
+  catch { showToast('Could not read that file'); return; }
+  const outlines = [...doc.querySelectorAll('outline[xmlUrl]')];
+  if (doc.querySelector('parsererror') || !outlines.length) { showToast('No feeds found — is this an OPML file?'); return; }
+
+  let added = 0, skipped = 0, overCap = 0;
+  for (const o of outlines) {
+    const url = (o.getAttribute('xmlUrl') || '').trim();
+    if (!/^https?:\/\//i.test(url) || feeds.some(f => f.url === url)) { skipped++; continue; }
+    if (added >= MAX_IMPORT) { overCap++; continue; }
+    let base = (o.getAttribute('title') || o.getAttribute('text') || '').trim();
+    if (!base) { try { base = new URL(url).hostname; } catch { skipped++; continue; } }
+    let name = base;
+    for (let n = 2; feeds.some(f => f.name === name); n++) name = `${base} (${n})`;
+    const color = CUSTOM_COLORS[feeds.filter(f => f.custom).length % CUSTOM_COLORS.length];
+    feeds.push({ name, url, color, initials: toInitials(name), enabled: true, custom: true });
+    added++;
+  }
+
+  saveAllFeeds();
+  openSettings();
+  showToast(`Imported ${added} feed${added !== 1 ? 's' : ''}` +
+    (skipped ? ` · ${skipped} already present or invalid` : '') +
+    (overCap ? ` · ${overCap} not imported (limit ${MAX_IMPORT} per import)` : ''), 5000);
+  if (added) refreshAll();
+}
+
 /* ── Suggest a feed ── */
 /* Opens a GitHub issue pre-filled from .github/ISSUE_TEMPLATE/feed-suggestion.yml
    (query params matching the form's field ids fill those fields). */
@@ -1076,6 +1278,15 @@ const addFeedBtn  = $('add-feed-btn');
 const newFeedUrl  = $('new-feed-url');
 const newFeedName = $('new-feed-name');
 if (addFeedBtn) addFeedBtn.addEventListener('click', testAndAddFeed);
+$('import-opml-btn')?.addEventListener('click', () => $('import-opml-input').click());
+$('import-opml-input')?.addEventListener('change', e => {
+  const file = e.target.files?.[0];
+  e.target.value = '';  // allow re-importing the same file
+  if (file) importOpml(file);
+});
+navigator.serviceWorker?.addEventListener('message', e => {
+  if (e.data?.type === 'open-item') openItemById(e.data.id);
+});
 $('suggest-feed-link')?.addEventListener('click', e => {
   e.preventDefault();
   suggestFeed($('new-feed-name').value.trim(), $('new-feed-url').value.trim());
@@ -1298,5 +1509,6 @@ $('version-badge').textContent = VERSION;
 $('app-version').textContent   = VERSION;
 initTagBar();
 initPriorityBar();
+initTimeBar();
 /* With cached articles on screen, refresh quietly in the background. */
 refreshAll(loadCache());

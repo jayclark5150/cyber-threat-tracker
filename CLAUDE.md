@@ -26,8 +26,9 @@ This is a **vanilla JS single-page app** — no framework, no bundler, no build 
 - **`VERSION`** in `app.js` is the single source for the version shown in the header badge and the chart toolbar; also update the README badge/changelog when bumping it.
 - **`index.html`** — static app shell with all DOM structure. Elements are referenced by ID via the `$ = id => document.getElementById(id)` shorthand in `app.js`.
 - **`styles.css`** — CSS custom properties drive the dark/light theme; `data-theme` on `<html>` switches between them.
-- **`sw.js`** — service worker. Cache name is `ctt-v9`; increment it whenever cached assets change so old caches are evicted on activate. `feeds.json` is network-first with the last copy kept for offline.
-- **`scripts/build_feeds.py`** — server-side snapshot builder (Python stdlib). Reads the feed list from `app.js`, writes `feeds.json`.
+- **`sw.js`** — service worker. Cache name is `ctt-v10`; increment it whenever cached assets change so old caches are evicted on activate. `feeds.json` is network-first with the last copy kept for offline.
+- **`scripts/build_feeds.py`** — server-side snapshot builder (Python stdlib). Reads the feed list from `app.js`, writes `feeds.json` (per feed: `ok, fetched, items, error?, failingSince?`; top level: `generated, kevIds`).
+- **`scripts/check_feed_health.py`** — run by the workflow after the build; opens/closes `feed-health` issues via `gh` for feeds failing 24h+. Test with `--dry-run`.
 - **`.github/workflows/update-feeds.yml`** — runs the builder every 15 min and on push, then deploys to GitHub Pages (Pages source must be "GitHub Actions"; the site is not served from the branch).
 
 ## Feed Fetching
@@ -43,6 +44,8 @@ Custom feeds (`custom: true`, stored in `ctt-custom`) have `cors` learned at run
 
 Fetchers return raw items `{title, link, desc, ts, kev?, ransomware?}`; `makeItem()` turns them into display items (tags, priority, id, read state). Tagging/priority logic lives only in `app.js`, never in the builder. `buildItems()` merges enabled feeds and de-duplicates by link (first feed in list order wins). `commitItems(items, background)` holds background updates behind the "N new stories" button when the list is scrolled down.
 
+`makeItem()` also extracts CVE IDs (`cves`) and sets `exploited` when one is in `kevSet` (from `feeds.json` `kevIds`), which forces priority to critical. `feedStatus` (name → `{ok, error, fetched, failingSince}`) drives the health display in Settings. `knownIds` tracks seen story ids so `notifyNewCritical()` alerts only on new ones (never on the first load); notification clicks go through `sw.js` `notificationclick` → `postMessage` → `openItemById()`.
+
 On failure a feed keeps its last-known items (`lastGoodByFeed`), both in the browser and in the builder (`--previous`).
 
 ## State & localStorage
@@ -52,7 +55,8 @@ On failure a feed keeps its last-known items (`lastGoodByFeed`), both in the bro
 | `ctt-v2` | Per-feed enabled/disabled map (built-in feeds) |
 | `ctt-custom` | Array of user-added custom feed objects |
 | `ctt-read` | Array of read article IDs (capped at 3000) |
-| `ctt-cache` | Last items per feed (raw form) + `savedAt`, for instant startup |
+| `ctt-cache` | Last items per feed (raw form) + `savedAt` + `kevIds`, for instant startup |
+| `ctt-notify` | `'1'` when desktop alerts for new Critical stories are on |
 
 All `localStorage` writes go through `safeSetItem()` to swallow quota/policy errors silently. All reads are wrapped in try/catch for the same reason.
 

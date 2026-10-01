@@ -1,12 +1,13 @@
 # Cyber Threat Tracker
 
-A Progressive Web App (PWA) that aggregates 39 cyber threat intelligence sources into a single, real-time dashboard.
+A Progressive Web App (PWA) that aggregates 48 cyber threat intelligence sources into a single, real-time dashboard.
 
-![Version](https://img.shields.io/badge/version-v0.2.2-blue) ![License](https://img.shields.io/badge/license-MIT-green)
+![Version](https://img.shields.io/badge/version-v0.3.0-blue) ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Features
 
-- **39 sources** — CISA (including the Known Exploited Vulnerabilities catalog), Canadian Cyber Centre, NCSC UK, Bleeping Computer, The Hacker News, The Record, Cisco Talos, Microsoft, Unit 42, Securelist, SANS ISC, Zero Day Initiative, and more
+- **48 sources** — CISA (including the Known Exploited Vulnerabilities catalog), Canadian Cyber Centre, NCSC UK, Google Threat Intelligence (Mandiant), Cisco and Fortinet security advisories, Exploit-DB, Bleeping Computer, The Hacker News, The Record, Cisco Talos, Microsoft, Unit 42, SANS ISC, Zero Day Initiative, and more
+- **Exploited-vulnerability flags** — CVE IDs in any story link to NVD; stories mentioning a CVE in CISA's KEV catalog get an **Exploited** badge, are raised to Critical, and can be filtered with the **Exploited** chip
 - **Fast startup** — a pre-built `feeds.json` snapshot (refreshed every 15 minutes by GitHub Actions) loads in one request, and the last-seen stories are shown instantly from the browser cache
 - **Threat tag detection** — articles are automatically tagged: Ransomware, Vulnerability, APT, Phishing, Malware, Data Breach, Critical Infra, DDoS
 - **Priority scoring** — Critical / High / Medium labels based on threat type
@@ -16,6 +17,9 @@ A Progressive Web App (PWA) that aggregates 39 cyber threat intelligence sources
 - **Dark / light mode** — persisted across sessions
 - **Read/unread tracking** — opened stories are marked read and dimmed, with an unread count in the header and a "mark all read" action
 - **Priority filter chips** — filter the story list by Critical / High / Medium / Low, independent of the source and threat-tag filters
+- **Time filter** — show only the last 24 hours or 7 days
+- **Desktop alerts** — optional notifications for new Critical stories while the app is open in the background
+- **Feed health** — Settings shows each feed's status and when it last updated; GitHub opens an issue automatically when a built-in feed fails for a day
 - **Keyboard navigation** — ↑/↓ arrows move the selection through the story list
 - **Resizable panels** — drag the vertical divider to resize the feed list, drag the horizontal divider to resize the article/chart split
 - **Background refresh** — every 5 minutes and whenever you return to the tab; new stories wait behind a "N new stories" button if you've scrolled down, so the list doesn't jump while you read
@@ -42,6 +46,9 @@ A Progressive Web App (PWA) that aggregates 39 cyber threat intelligence sources
 | Help Net Security | News |
 | Cybersecurity Dive | News |
 | Schneier on Security | News |
+| The Register | News |
+| Wired Security | News |
+| Troy Hunt | News |
 | Cisco Talos | Threat Intel |
 | SANS ISC | Threat Intel |
 | Securelist | Threat Intel |
@@ -62,8 +69,14 @@ A Progressive Web App (PWA) that aggregates 39 cyber threat intelligence sources
 | ANY.RUN | Threat Intel |
 | GreyNoise | Threat Intel |
 | VirusTotal | Threat Intel |
+| Google Threat Intel | Threat Intel |
+| GitHub Security | Threat Intel |
+| AWS Security | Threat Intel |
 | Google Proj Zero | Vulnerability Research |
 | Zero Day Initiative | Vulnerability Research |
+| Exploit-DB | Vulnerability Research |
+| Cisco PSIRT | Vendor Advisories |
+| Fortinet PSIRT | Vendor Advisories |
 | ransomware.live (off by default) | Ransomware |
 
 CISA KEV entries are always marked **Critical**, since each one is confirmed to be exploited in the wild.
@@ -97,7 +110,9 @@ python3 scripts/build_feeds.py   # writes feeds.json (git-ignored); Python 3.10+
 | `manifest.json` | PWA manifest |
 | `threat-feeds.opml` | Static OPML export of the built-in RSS feeds |
 | `scripts/build_feeds.py` | Fetches every built-in feed server-side and writes `feeds.json` |
-| `.github/workflows/update-feeds.yml` | Runs the builder every 15 minutes and deploys the site to GitHub Pages |
+| `scripts/check_feed_health.py` | Opens a GitHub issue for any feed failing 24h+, closes it on recovery |
+| `.github/workflows/update-feeds.yml` | Runs the builder and health check every 15 minutes and deploys the site to GitHub Pages |
+| `.github/ISSUE_TEMPLATE/feed-suggestion.yml` | Issue form behind "Suggest a feed for everyone" |
 
 ### How feeds load
 
@@ -134,6 +149,27 @@ browser where you added them, and are fetched live by your browser rather than f
 - Otherwise it's loaded through the **rss2json** proxy, which caps feeds at 10 stories and
   sometimes rate-limits new feeds. If that happens, try again later.
 
+### Importing feeds
+
+**Import OPML…** (under Add Custom Feed) adds every feed in an OPML file from another reader as
+custom feeds. Feeds already in the app are skipped, and up to 30 are imported at a time, since
+custom feeds are fetched live by your browser.
+
+### Desktop alerts
+
+Turn on **Desktop alerts for new Critical stories** at the top of Settings and allow
+notifications when the browser asks. While the app is open — even in a background tab — a
+refresh that finds new Critical stories from the last 24 hours shows a notification; clicking it
+opens the story. No alert is shown while you're looking at the app. Alerts need the app open;
+there are no alerts while it's closed.
+
+### Feed health
+
+Settings shows a summary of failing feeds and, under each feed, when it last updated (or how
+long it has been failing; hover for the error). For built-in feeds, the snapshot workflow opens a
+**Feed failing: &lt;name&gt;** issue (label `feed-health`) once a feed has failed for 24 hours,
+and closes it automatically when the feed recovers.
+
 ### Suggesting a feed for everyone
 
 To get a source added to the built-in list (collected every 15 minutes, visible to all users),
@@ -143,6 +179,25 @@ next to any custom feed. It opens a pre-filled
 on GitHub (a GitHub account is required).
 
 ## Changelog
+
+### v0.3.0 (2026-10-01)
+
+- **Exploited CVEs** — CVE IDs in stories are linked to NVD. Any story mentioning a CVE in
+  CISA's KEV catalog (all ~1,700, published in `feeds.json` as `kevIds`) gets an **Exploited**
+  badge and Critical priority, and the new **Exploited** chip filters to them plus KEV entries
+- **Feed health** — per-feed status in Settings (last update, or failing since when, with the
+  error on hover) and a summary of failing feeds. The workflow opens a `feed-health` issue for a
+  built-in feed after 24 hours of failures and closes it on recovery
+  (`scripts/check_feed_health.py`); the snapshot now records `failingSince` per feed
+- **Desktop alerts** for new Critical stories while the app is open in the background (opt-in in
+  Settings); clicking an alert opens the story
+- **Time filter** — 24h / 7 days chips
+- **OPML import** — add feeds from another reader (up to 30 per import, duplicates skipped)
+- **Future-dated stories** are shown at their fetch time instead of in the future (Fortinet's
+  feed labels UTC times as −07:00)
+- **9 new sources**: Google Threat Intelligence (replaces the Mandiant feed removed in v0.2.0),
+  Cisco PSIRT, Fortinet PSIRT (new *Vendor Advisories* category), Exploit-DB, GitHub Security,
+  The Register, Wired Security, Troy Hunt, AWS Security — 48 sources in total
 
 ### v0.2.2 (2026-10-01)
 

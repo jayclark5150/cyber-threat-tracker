@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: read
+  issues: write      # check_feed_health.py opens/closes "Feed failing" issues
   pages: write
   id-token: write
 
@@ -41,6 +42,14 @@ jobs:
           python3 scripts/build_feeds.py \
             --out _site/feeds.json \
             --previous "${{ steps.pages.outputs.base_url }}/feeds.json"
+
+      - name: Check feed health
+        # Opens an issue for feeds failing 24h+, closes it when they recover.
+        # Never blocks the deploy.
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/check_feed_health.py _site/feeds.json
 
       - uses: actions/upload-pages-artifact@v3
         with:
