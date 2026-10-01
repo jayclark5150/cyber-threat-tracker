@@ -1,12 +1,13 @@
 # Cyber Threat Tracker
 
-A Progressive Web App (PWA) that aggregates 22 cyber threat intelligence RSS feeds into a single, real-time dashboard.
+A Progressive Web App (PWA) that aggregates 39 cyber threat intelligence sources into a single, real-time dashboard.
 
-![Version](https://img.shields.io/badge/version-v0.1.1-blue) ![License](https://img.shields.io/badge/license-MIT-green)
+![Version](https://img.shields.io/badge/version-v0.2.0-blue) ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Features
 
-- **22 RSS feed sources** — CISA, Bleeping Computer, The Hacker News, CrowdStrike, Cisco Talos, Mandiant, Securelist, Unit 42, SANS ISC, and more
+- **39 sources** — CISA (including the Known Exploited Vulnerabilities catalog), Canadian Cyber Centre, NCSC UK, Bleeping Computer, The Hacker News, The Record, Cisco Talos, Microsoft, Unit 42, Securelist, SANS ISC, Zero Day Initiative, and more
+- **Fast startup** — a pre-built `feeds.json` snapshot (refreshed every 15 minutes by GitHub Actions) loads in one request, and the last-seen stories are shown instantly from the browser cache
 - **Threat tag detection** — articles are automatically tagged: Ransomware, Vulnerability, APT, Phishing, Malware, Data Breach, Critical Infra, DDoS
 - **Priority scoring** — Critical / High / Medium labels based on threat type
 - **Live activity charts** — By Source (donut), By Threat Type (donut), Over Time (line) — powered by Chart.js
@@ -17,7 +18,8 @@ A Progressive Web App (PWA) that aggregates 22 cyber threat intelligence RSS fee
 - **Priority filter chips** — filter the story list by Critical / High / Medium / Low, independent of the source and threat-tag filters
 - **Keyboard navigation** — ↑/↓ arrows move the selection through the story list
 - **Resizable panels** — drag the vertical divider to resize the feed list, drag the horizontal divider to resize the article/chart split
-- **Offline support** — service worker caches the app shell
+- **Background refresh** — every 5 minutes and whenever you return to the tab; new stories wait behind a "N new stories" button if you've scrolled down, so the list doesn't jump while you read
+- **Offline support** — service worker caches the app shell and the latest snapshot
 - **PWA installable** — add to home screen on iOS / Android / desktop
 
 ## Sources
@@ -26,56 +28,98 @@ A Progressive Web App (PWA) that aggregates 22 cyber threat intelligence RSS fee
 |--------|----------|
 | CISA Advisories | Government |
 | CISA Alerts | Government |
-| CISA Current Activity | Government |
+| CISA Cur. Activity | Government |
+| CISA KEV | Government |
+| Canadian Cyber Centre | Government |
+| NCSC UK | Government |
+| Krebs on Security | News |
 | Bleeping Computer | News |
 | The Hacker News | News |
 | Dark Reading | News |
 | SecurityWeek | News |
-| Krebs on Security | News |
-| CrowdStrike | Threat Intel |
+| The Record | News |
+| Security Affairs | News |
+| Help Net Security | News |
+| Cybersecurity Dive | News |
+| Schneier on Security | News |
 | Cisco Talos | Threat Intel |
-| Mandiant | Threat Intel |
-| Recorded Future | Threat Intel |
-| IBM Security | Threat Intel |
-| Securelist (Kaspersky) | Threat Intel |
-| Unit 42 (Palo Alto) | Threat Intel |
 | SANS ISC | Threat Intel |
-| Abuse.ch | Threat Intel |
+| Securelist | Threat Intel |
+| Unit 42 | Threat Intel |
+| Recorded Future | Threat Intel |
+| Microsoft Security | Threat Intel |
+| Check Point Research | Threat Intel |
+| ESET WeLiveSecurity | Threat Intel |
+| Rapid7 | Threat Intel |
+| Proofpoint | Threat Intel |
+| SentinelLabs | Threat Intel |
+| Wiz | Threat Intel |
+| Huntress | Threat Intel |
+| Volexity | Threat Intel |
+| The DFIR Report | Threat Intel |
+| Red Canary | Threat Intel |
+| MISP | Threat Intel |
 | ANY.RUN | Threat Intel |
-| Google Project Zero | Vulnerability Research |
 | GreyNoise | Threat Intel |
 | VirusTotal | Threat Intel |
-| MISP | Open Source Intel |
+| Google Proj Zero | Vulnerability Research |
+| Zero Day Initiative | Vulnerability Research |
+| ransomware.live (off by default) | Ransomware |
+
+CISA KEV entries are always marked **Critical**, since each one is confirmed to be exploited in the wild.
+ransomware.live lists ransomware leak-site victim posts as they appear; enable it in Settings if you want that volume.
 
 ## Running Locally
 
-No build step or server required. Open `index.html` directly in a browser, or serve from any static file server:
+No build step is required. Serve the folder with any static file server:
 
 ```bash
-# Python
 python3 -m http.server 8080
-
-# Node (npx)
+# or
 npx serve .
 ```
 
-Then open `http://localhost:8080`.
+Then open `http://localhost:8080`. Without a local `feeds.json` the app fetches every feed live
+through the proxy (slower, and rate-limited). To use a snapshot locally, build one first:
+
+```bash
+python3 scripts/build_feeds.py   # writes feeds.json (git-ignored); Python 3.10+, no dependencies
+```
 
 ## Architecture
 
 | File | Purpose |
 |------|---------|
 | `index.html` | App shell, layout, settings modal |
-| `app.js` | Feed fetching, parsing, rendering, state |
+| `app.js` | Feed list, fetching, parsing, rendering, state |
 | `styles.css` | CSS variables, dark/light themes, layout |
-| `sw.js` | Service worker — cache-first for app shell, network-first for feeds |
+| `sw.js` | Service worker — cache-first for the app shell, network-first for `feeds.json` and the proxy |
 | `manifest.json` | PWA manifest |
-| `threat-feeds.opml` | Static OPML export of all 22 feeds |
+| `threat-feeds.opml` | Static OPML export of the built-in RSS feeds |
+| `scripts/build_feeds.py` | Fetches every built-in feed server-side and writes `feeds.json` |
+| `.github/workflows/update-feeds.yml` | Runs the builder every 15 minutes and deploys the site to GitHub Pages |
 
-RSS feeds are fetched client-side via a proxy chain to work around browser CORS restrictions:
-1. **rss2json.com** — returns clean JSON (primary)
-2. **allorigins.win/raw** — returns raw XML (fallback)
-3. **Direct fetch** — for feeds with CORS headers (last resort)
+### How feeds load
+
+1. **Cache** — stories from the previous visit are shown immediately from `localStorage`.
+2. **Snapshot** — `feeds.json` is fetched from the same site. It is rebuilt every 15 minutes by
+   GitHub Actions, which fetches feeds server-side (no CORS limits, no proxy rate limits, up to
+   25 stories per feed).
+3. **Live fallback** — custom feeds, any feed the snapshot failed on, and every feed if the
+   snapshot is missing or more than an hour old are fetched in the browser: directly for feeds
+   that allow it (`cors: true`), otherwise via **rss2json.com**. Stories appear as each feed
+   arrives. If a fetch fails, the feed keeps its last-known stories.
+
+The feed list lives in `app.js` between `/*FEEDS:START*/` and `/*FEEDS:END*/` as strict JSON,
+so the snapshot builder reads the same list. Keep it valid JSON (double quotes, no trailing
+commas or comments).
+
+### Deployment
+
+The site is deployed by the workflow, not directly from the branch: **Settings → Pages →
+Source** must be **GitHub Actions**. Pushing to `main` redeploys; you can also run it from the
+**Actions** tab. GitHub pauses scheduled workflows after 60 days without repository activity —
+re-enable it from the Actions tab if the snapshot stops updating.
 
 ## Customization
 
@@ -84,6 +128,41 @@ Open the **Settings** gear icon to enable/disable any feed. Use the **Add Custom
 Custom feeds are stored in `localStorage` and persist across sessions.
 
 ## Changelog
+
+### v0.2.0 (2026-10-01)
+
+Faster loading:
+- **feeds.json snapshot** built every 15 minutes by GitHub Actions — the app now loads one
+  same-origin file instead of making 20+ proxy requests. In testing, the first story appeared in
+  **0.7 s instead of 27 s**, and all sources loaded (the old version lost half its sources to
+  rss2json rate limiting)
+- **Instant startup** from the previous visit's stories, cached in `localStorage`
+- **Progressive rendering** — when fetching live, stories appear as each feed arrives instead of
+  after the slowest feed
+- Feeds with CORS headers are fetched directly; proxy timeouts cut from 12 s to 6 s; the
+  allorigins.win proxy (frequently down) was removed
+- Chart.js and `app.js` are loaded with `defer` so they don't block first paint
+
+Refresh:
+- Auto-refresh every 5 minutes (15 when falling back to live fetching), and on returning to the
+  tab or reconnecting if the data is more than 5 minutes old
+- "N new stories" button holds back background updates while you're scrolled down the list
+- Header shows how old the data is ("Updated 4m ago")
+- The service worker keeps the latest snapshot for offline use
+
+Sources:
+- Fixed: Cisco Talos (feed moved), SecurityWeek, ANY.RUN, Google Project Zero, CISA Alerts and
+  CISA Current Activity (URLs redirected)
+- Removed dead feeds: CrowdStrike (empty response), Mandiant (now a web page), Abuse.ch (404),
+  IBM Security (now a web page)
+- Added: CISA KEV, Canadian Cyber Centre, NCSC UK, The Record, Security Affairs, Help Net
+  Security, Cybersecurity Dive, Schneier on Security, Microsoft Security, Check Point Research,
+  ESET, Rapid7, Proofpoint, SentinelLabs, Wiz, Huntress, Volexity, The DFIR Report, Red Canary,
+  Zero Day Initiative, ransomware.live (off by default)
+- Duplicate stories that appear in more than one feed (e.g. the CISA feeds) are shown once
+
+Fixes:
+- rss2json dates are UTC but were parsed as local time, shifting story times by the UTC offset
 
 ### v0.1.1 (2026-09-12)
 

@@ -1,0 +1,57 @@
+# Builds feeds.json (a snapshot of every built-in feed) and deploys the site to GitHub Pages.
+# Runs every 15 minutes, on every push to main, and on demand from the Actions tab.
+# Requires Settings → Pages → Source = "GitHub Actions".
+name: Update feeds and deploy
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'   # GitHub may delay scheduled runs during busy periods
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Assemble site
+        run: |
+          mkdir _site
+          git ls-files | grep -v -E '^(\.github/|scripts/|CLAUDE\.md$|\.gitignore$)' \
+            | xargs -I{} cp --parents {} _site/
+
+      - name: Build feeds.json
+        # --previous carries over last-known items for any feed that fails this run
+        run: |
+          python3 scripts/build_feeds.py \
+            --out _site/feeds.json \
+            --previous "${{ steps.pages.outputs.base_url }}/feeds.json"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

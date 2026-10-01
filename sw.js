@@ -1,4 +1,4 @@
-const CACHE = 'ctt-v6';
+const CACHE = 'ctt-v7';
 const ASSETS = [
   './',
   './index.html',
@@ -29,10 +29,27 @@ self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
 
-  /* Network-first for all proxy/feed requests */
-  if (url.hostname === 'api.allorigins.win' || url.hostname === 'api.rss2json.com') {
+  /* Network-first for the rss2json proxy */
+  if (url.hostname === 'api.rss2json.com') {
     e.respondWith(
       fetch(e.request).catch(() => new Response('{}', { headers: { 'Content-Type': 'application/json' } }))
+    );
+    return;
+  }
+
+  /* Leave other cross-origin requests (direct feed fetches, Chart.js CDN) to the browser */
+  if (url.origin !== self.location.origin) return;
+
+  /* feeds.json snapshot: network-first, keep the last good copy for offline use */
+  if (url.pathname.endsWith('/feeds.json')) {
+    e.respondWith(
+      fetch(e.request).then(res => {
+        if (res.ok) {
+          const copy = res.clone();
+          caches.open(CACHE).then(c => c.put(url.pathname, copy));
+        }
+        return res;
+      }).catch(() => caches.match(url.pathname).then(hit => hit || Response.error()))
     );
     return;
   }

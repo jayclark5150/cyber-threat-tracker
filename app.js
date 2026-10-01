@@ -1,33 +1,50 @@
 'use strict';
 
-/* ── Feed definitions ── */
-const FEEDS = [
-  // Core news feeds
-  { name: 'CISA Advisories',   url: 'https://www.cisa.gov/cybersecurity-advisories/all.xml',       color: '#5b8df0', initials: 'CI', enabled: true  },
-  { name: 'Krebs on Security', url: 'https://krebsonsecurity.com/feed/',                           color: '#f7a650', initials: 'KS', enabled: true  },
-  { name: 'Bleeping Computer', url: 'https://www.bleepingcomputer.com/feed/',                      color: '#4dbb7e', initials: 'BC', enabled: true  },
-  { name: 'The Hacker News',   url: 'https://feeds.feedburner.com/TheHackersNews',                color: '#a855f7', initials: 'HN', enabled: true  },
-  { name: 'Dark Reading',      url: 'https://www.darkreading.com/rss.xml',                        color: '#38c4c4', initials: 'DR', enabled: true  },
-  { name: 'SecurityWeek',      url: 'https://feeds.feedburner.com/securityweek',                  color: '#ff6464', initials: 'SW', enabled: true  },
-  // Top 10 Threat Intelligence Feeds 2026
-  { name: 'CrowdStrike',       url: 'https://www.crowdstrike.com/blog/feed/',                     color: '#e91e8c', initials: 'CS', enabled: true  },
-  { name: 'Cisco Talos',       url: 'https://blog.talosintelligence.com/feeds/posts/default',     color: '#ff7043', initials: 'CT', enabled: true  },
-  { name: 'SANS ISC',          url: 'https://isc.sans.edu/rssfeed_full.xml',                      color: '#ffd600', initials: 'SI', enabled: true  },
-  { name: 'Securelist',        url: 'https://securelist.com/feed/',                               color: '#ef5350', initials: 'SL', enabled: true  },
-  { name: 'Unit 42',           url: 'https://unit42.paloaltonetworks.com/feed/',                  color: '#26c6da', initials: 'U4', enabled: true  },
-  { name: 'Recorded Future',   url: 'https://www.recordedfuture.com/feed',                        color: '#00b4d8', initials: 'RF', enabled: true  },
-  { name: 'Mandiant',          url: 'https://www.mandiant.com/resources/blog/rss.xml',            color: '#f44336', initials: 'MD', enabled: true  },
-  { name: 'IBM Security',      url: 'https://securityintelligence.com/feed/',                     color: '#42a5f5', initials: 'IB', enabled: true  },
-  { name: 'MISP',              url: 'https://www.misp-project.org/feed.xml',                      color: '#7e57c2', initials: 'MI', enabled: true  },
-  { name: 'Abuse.ch',          url: 'https://abuse.ch/blog/feed/',                               color: '#9ccc65', initials: 'AB', enabled: true  },
-  { name: 'ANY.RUN',           url: 'https://any.run/cybersecurity-blog/rss/',                    color: '#00e5ff', initials: 'AR', enabled: true  },
-  { name: 'Google Proj Zero',  url: 'https://googleprojectzero.blogspot.com/feeds/posts/default', color: '#ffca28', initials: 'G0', enabled: true  },
-  // Additional sources (ISC list)
-  { name: 'GreyNoise',         url: 'https://www.greynoise.io/blog/rss.xml',                      color: '#78909c', initials: 'GN', enabled: true  },
-  { name: 'VirusTotal',        url: 'https://blog.virustotal.com/feeds/posts/default',             color: '#26a69a', initials: 'VT', enabled: true  },
-  { name: 'CISA Alerts',       url: 'https://www.cisa.gov/uscert/ncas/alerts.xml',                color: '#b71c1c', initials: 'CA', enabled: true  },
-  { name: 'CISA Cur. Activity',url: 'https://www.cisa.gov/uscert/ncas/current-activity.xml',     color: '#e65100', initials: 'CC', enabled: true  },
-];
+/* Feed definitions. Kept as strict JSON between the markers so the GitHub Actions
+   snapshot builder (scripts/build_feeds.py) can read the same list. Optional fields:
+   cors: true  - feed sends CORS headers, so fetch it directly before trying the proxy
+   type: 'kev' - CISA Known Exploited Vulnerabilities JSON; only available via feeds.json */
+const FEEDS = /*FEEDS:START*/[
+  {"name": "CISA Advisories", "url": "https://www.cisa.gov/cybersecurity-advisories/all.xml", "color": "#5b8df0", "initials": "CI", "group": "Government", "enabled": true},
+  {"name": "CISA Alerts", "url": "https://www.cisa.gov/cybersecurity-advisories/cybersecurity-advisories.xml", "color": "#b71c1c", "initials": "CA", "group": "Government", "enabled": true},
+  {"name": "CISA Cur. Activity", "url": "https://www.cisa.gov/cybersecurity-advisories/alerts.xml", "color": "#e65100", "initials": "CC", "group": "Government", "enabled": true},
+  {"name": "CISA KEV", "url": "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json", "color": "#d50000", "initials": "KV", "group": "Government", "enabled": true, "type": "kev"},
+  {"name": "Canadian Cyber Centre", "url": "https://www.cyber.gc.ca/api/cccs/atom/v1/get?feed=alerts_advisories&lang=en", "color": "#c62828", "initials": "CY", "group": "Government", "enabled": true, "cors": true},
+  {"name": "NCSC UK", "url": "https://www.ncsc.gov.uk/api/1/services/v1/news-rss-feed.xml", "color": "#1565c0", "initials": "NC", "group": "Government", "enabled": true},
+  {"name": "Krebs on Security", "url": "https://krebsonsecurity.com/feed/", "color": "#f7a650", "initials": "KS", "group": "News", "enabled": true},
+  {"name": "Bleeping Computer", "url": "https://www.bleepingcomputer.com/feed/", "color": "#4dbb7e", "initials": "BC", "group": "News", "enabled": true},
+  {"name": "The Hacker News", "url": "https://feeds.feedburner.com/TheHackersNews", "color": "#a855f7", "initials": "HN", "group": "News", "enabled": true},
+  {"name": "Dark Reading", "url": "https://www.darkreading.com/rss.xml", "color": "#38c4c4", "initials": "DR", "group": "News", "enabled": true, "cors": true},
+  {"name": "SecurityWeek", "url": "https://www.securityweek.com/feed/", "color": "#ff6464", "initials": "SW", "group": "News", "enabled": true},
+  {"name": "The Record", "url": "https://therecord.media/feed", "color": "#ffb300", "initials": "TR", "group": "News", "enabled": true, "cors": true},
+  {"name": "Security Affairs", "url": "https://securityaffairs.com/feed", "color": "#8d6e63", "initials": "SA", "group": "News", "enabled": true},
+  {"name": "Help Net Security", "url": "https://www.helpnetsecurity.com/feed/", "color": "#29b6f6", "initials": "HS", "group": "News", "enabled": true},
+  {"name": "Cybersecurity Dive", "url": "https://www.cybersecuritydive.com/feeds/news/", "color": "#66bb6a", "initials": "CD", "group": "News", "enabled": true, "cors": true},
+  {"name": "Schneier on Security", "url": "https://www.schneier.com/feed/atom/", "color": "#9e9e9e", "initials": "BS", "group": "News", "enabled": true},
+  {"name": "Cisco Talos", "url": "https://blog.talosintelligence.com/rss/", "color": "#ff7043", "initials": "CT", "group": "Threat Intel", "enabled": true},
+  {"name": "SANS ISC", "url": "https://isc.sans.edu/rssfeed_full.xml", "color": "#ffd600", "initials": "SI", "group": "Threat Intel", "enabled": true},
+  {"name": "Securelist", "url": "https://securelist.com/feed/", "color": "#ef5350", "initials": "SL", "group": "Threat Intel", "enabled": true, "cors": true},
+  {"name": "Unit 42", "url": "https://unit42.paloaltonetworks.com/feed/", "color": "#26c6da", "initials": "U4", "group": "Threat Intel", "enabled": true},
+  {"name": "Recorded Future", "url": "https://www.recordedfuture.com/feed", "color": "#00b4d8", "initials": "RF", "group": "Threat Intel", "enabled": true},
+  {"name": "Microsoft Security", "url": "https://www.microsoft.com/en-us/security/blog/feed/", "color": "#00a4ef", "initials": "MS", "group": "Threat Intel", "enabled": true},
+  {"name": "Check Point Research", "url": "https://research.checkpoint.com/feed/", "color": "#e91e63", "initials": "CP", "group": "Threat Intel", "enabled": true},
+  {"name": "ESET WeLiveSecurity", "url": "https://feeds.feedburner.com/eset/blog", "color": "#00897b", "initials": "ES", "group": "Threat Intel", "enabled": true},
+  {"name": "Rapid7", "url": "https://www.rapid7.com/rss.xml", "color": "#f4511e", "initials": "R7", "group": "Threat Intel", "enabled": true, "cors": true},
+  {"name": "Proofpoint", "url": "https://www.proofpoint.com/us/threat-insight-blog.xml", "color": "#3949ab", "initials": "PP", "group": "Threat Intel", "enabled": true},
+  {"name": "SentinelLabs", "url": "https://www.sentinelone.com/labs/feed/", "color": "#7b1fa2", "initials": "S1", "group": "Threat Intel", "enabled": true},
+  {"name": "Wiz", "url": "https://www.wiz.io/feed/rss.xml", "color": "#2979ff", "initials": "WZ", "group": "Threat Intel", "enabled": true},
+  {"name": "Huntress", "url": "https://www.huntress.com/blog/rss.xml", "color": "#43a047", "initials": "HU", "group": "Threat Intel", "enabled": true},
+  {"name": "Volexity", "url": "https://www.volexity.com/feed/", "color": "#546e7a", "initials": "VO", "group": "Threat Intel", "enabled": true},
+  {"name": "The DFIR Report", "url": "https://thedfirreport.com/feed/", "color": "#8bc34a", "initials": "DF", "group": "Threat Intel", "enabled": true},
+  {"name": "Red Canary", "url": "https://redcanary.com/feed/", "color": "#e53935", "initials": "RC", "group": "Threat Intel", "enabled": true},
+  {"name": "MISP", "url": "https://www.misp-project.org/feed.xml", "color": "#7e57c2", "initials": "MI", "group": "Threat Intel", "enabled": true},
+  {"name": "ANY.RUN", "url": "https://any.run/cybersecurity-blog/feed/", "color": "#00e5ff", "initials": "AR", "group": "Threat Intel", "enabled": true, "cors": true},
+  {"name": "GreyNoise", "url": "https://www.greynoise.io/blog/rss.xml", "color": "#78909c", "initials": "GN", "group": "Threat Intel", "enabled": true},
+  {"name": "VirusTotal", "url": "https://blog.virustotal.com/feeds/posts/default", "color": "#26a69a", "initials": "VT", "group": "Threat Intel", "enabled": true},
+  {"name": "Google Proj Zero", "url": "https://projectzero.google/feed.xml", "color": "#ffca28", "initials": "G0", "group": "Vulnerability Research", "enabled": true},
+  {"name": "Zero Day Initiative", "url": "https://www.zerodayinitiative.com/rss/published/", "color": "#fdd835", "initials": "ZD", "group": "Vulnerability Research", "enabled": true},
+  {"name": "ransomware.live", "url": "https://www.ransomware.live/rss.xml", "color": "#ad1457", "initials": "RL", "group": "Ransomware", "enabled": false}
+]/*FEEDS:END*/;
 
 /* ── Threat tag rules ── */
 const TAG_RULES = [
@@ -49,8 +66,14 @@ const TAG_RULES = [
     words: ['ddos','denial of service','distributed denial','mirai','botnet attack'] },
 ];
 
-const VERSION     = 'v0.1.1';
-const REFRESH_MS  = 15 * 60 * 1000;
+const VERSION     = 'v0.2.0';
+const REFRESH_MS       = 5 * 60 * 1000;   // auto-refresh when the feeds.json snapshot is fresh
+const REFRESH_SLOW_MS  = 15 * 60 * 1000;  // auto-refresh when falling back to live proxy fetches
+const STALE_ON_RETURN_MS = 5 * 60 * 1000; // refresh on tab return if data is older than this
+const SNAPSHOT_URL     = 'feeds.json';    // built every 15 min by .github/workflows/update-feeds.yml
+const SNAPSHOT_MAX_AGE_MS = 60 * 60 * 1000; // older than this = pipeline stalled, fetch feeds live
+const MAX_ITEMS_PER_FEED  = 25;
+const CACHE_KEY   = 'ctt-cache';
 const STORE_KEY   = 'ctt-v2';
 const CUSTOM_KEY  = 'ctt-custom';
 const READ_KEY    = 'ctt-read';
@@ -83,6 +106,8 @@ let readIds       = loadReadIds();
 const $ = id => document.getElementById(id);
 const feedLoading    = $('feed-loading');
 const feedItemsEl    = $('feed-items');
+const feedListEl     = $('feed-list');
+const newStoriesBtn  = $('new-stories-btn');
 const itemCount      = $('item-count');
 const lastUpdated    = $('last-updated');
 const filterBar      = $('filter-bar');
@@ -188,45 +213,38 @@ function getPriority(tags) {
   return 'low';
 }
 
-/* ── RSS fetch & parse — multi-proxy fallback ── */
+/* ── RSS fetch & parse ── */
 
-const PROXY_STRATEGIES = [
-  /* 1. rss2json — returns clean JSON */
-  async (feedUrl) => {
-    const u = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
-    const r = await fetch(u, { signal: AbortSignal.timeout(12000) });
-    if (!r.ok) throw new Error(`rss2json HTTP ${r.status}`);
-    const d = await r.json();
-    if (d.status !== 'ok') throw new Error(d.message || 'rss2json error');
-    return { type: 'json', data: d };
-  },
-  /* 2. allorigins /raw — returns raw XML */
-  async (feedUrl) => {
-    const u = `https://api.allorigins.win/raw?url=${encodeURIComponent(feedUrl)}`;
-    const r = await fetch(u, { signal: AbortSignal.timeout(12000) });
-    if (!r.ok) throw new Error(`allorigins HTTP ${r.status}`);
-    const text = await r.text();
-    if (!text.trim().startsWith('<')) throw new Error('Not XML');
-    return { type: 'xml', data: text };
-  },
-  /* 3. direct fetch — works for feeds with CORS headers */
-  async (feedUrl) => {
-    const r = await fetch(feedUrl, { signal: AbortSignal.timeout(10000) });
-    if (!r.ok) throw new Error(`direct HTTP ${r.status}`);
-    const text = await r.text();
-    if (!text.trim().startsWith('<')) throw new Error('Not XML');
-    return { type: 'xml', data: text };
-  },
-];
+const FETCH_TIMEOUT_MS = 6000;
 
+/* rss2json — returns clean JSON (free tier: max 10 items per feed) */
+async function viaRss2json(feedUrl) {
+  const u = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
+  const r = await fetch(u, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+  if (!r.ok) throw new Error(`rss2json HTTP ${r.status}`);
+  const d = await r.json();
+  if (d.status !== 'ok') throw new Error(d.message || 'rss2json error');
+  return parseJsonItems(d.items || []);
+}
+
+/* Direct fetch — only works for feeds that send CORS headers; fails fast otherwise */
+async function viaDirect(feedUrl) {
+  const r = await fetch(feedUrl, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+  if (!r.ok) throw new Error(`direct HTTP ${r.status}`);
+  const text = await r.text();
+  if (!text.trim().startsWith('<')) throw new Error('Not XML');
+  return parseXmlItems(text);
+}
+
+/* Returns raw items ({ title, link, desc, ts }), newest first, capped per feed.
+   Feeds marked cors:true skip the proxy entirely when the direct fetch works. */
 async function fetchFeed(feed) {
+  if (feed.type === 'kev') throw new Error('CISA KEV is only available from the feeds.json snapshot');
+  const strategies = feed.cors ? [viaDirect, viaRss2json] : [viaRss2json, viaDirect];
   let lastErr;
-  for (const strategy of PROXY_STRATEGIES) {
+  for (const strategy of strategies) {
     try {
-      const result = await strategy(feed.url);
-      return result.type === 'json'
-        ? parseJsonItems(result.data.items, feed)
-        : parseXmlItems(result.data, feed);
+      return (await strategy(feed.url)).sort((a, b) => b.ts - a.ts).slice(0, MAX_ITEMS_PER_FEED);
     } catch (e) {
       lastErr = e;
     }
@@ -234,22 +252,25 @@ async function fetchFeed(feed) {
   throw lastErr;
 }
 
-function parseJsonItems(items, feed) {
-  return items.map((item, i) => {
-    const date    = item.pubDate ? new Date(item.pubDate.replace(' ', 'T')) : new Date();
-    const rawDesc = item.description || item.content || '';
-    const desc    = stripHtml(rawDesc).slice(0, 600);
-    const title   = item.title || '(no title)';
-    const tags    = detectTags(title, desc);
-    const link    = item.link || item.guid || '';
-    const id      = link.trim() ? `${feed.name}:${link.trim()}` : `${feed.name}-${i}-${date.getTime()}`;
-    return {
-      id, source: feed.name, color: feed.color, initials: feed.initials,
-      title, link,
-      desc, date, ts: date.getTime(), tags, priority: getPriority(tags),
-      read: readIds.has(id),
-    };
-  });
+function parseDate(s) {
+  const t = s ? Date.parse(s) : NaN;
+  return Number.isNaN(t) ? Date.now() : t;
+}
+
+/* rss2json returns "YYYY-MM-DD HH:MM:SS" in UTC with no zone marker; without the 'Z'
+   the browser would read it as local time. */
+function rss2jsonDate(s) {
+  if (!s) return '';
+  return s.replace(' ', 'T') + (/[zZ]|[+-]\d\d:?\d\d$/.test(s) ? '' : 'Z');
+}
+
+function parseJsonItems(items) {
+  return items.map(item => ({
+    title: item.title || '(no title)',
+    link:  item.link || item.guid || '',
+    desc:  stripHtml(item.description || item.content || '').slice(0, 600),
+    ts:    parseDate(rss2jsonDate(item.pubDate)),
+  }));
 }
 
 /* Prefer <link rel="alternate"> (article URL) over <link rel="self"> (feed URL).
@@ -262,25 +283,44 @@ function pickXmlLink(node) {
   return pref.getAttribute('href') || pref.textContent?.trim() || '';
 }
 
-function parseXmlItems(xmlText, feed) {
+function parseXmlItems(xmlText) {
   const xml   = new DOMParser().parseFromString(xmlText, 'text/xml');
   const nodes = [...xml.querySelectorAll('item, entry')];
-  return nodes.map((node, i) => {
-    const get   = (...tags) => { for (const t of tags) { const v = node.querySelector(t)?.textContent?.trim(); if (v) return v; } return ''; };
-    const pubDate = get('pubDate', 'published', 'updated', 'dc\\:date');
-    const date  = pubDate ? new Date(pubDate) : new Date();
-    const rawDesc = get('description', 'summary', 'content');
-    const desc  = stripHtml(rawDesc).slice(0, 600);
-    const title = get('title') || '(no title)';
-    const link  = pickXmlLink(node) || get('guid', 'id') || '';
-    const tags  = detectTags(title, desc);
-    const id    = link.trim() ? `${feed.name}:${link.trim()}` : `${feed.name}-${i}-${date.getTime()}`;
+  return nodes.map(node => {
+    const get = (...tags) => { for (const t of tags) { const v = node.querySelector(t)?.textContent?.trim(); if (v) return v; } return ''; };
     return {
-      id, source: feed.name, color: feed.color, initials: feed.initials,
-      title, link, desc, date, ts: date.getTime(), tags, priority: getPriority(tags),
-      read: readIds.has(id),
+      title: get('title') || '(no title)',
+      link:  pickXmlLink(node) || get('guid', 'id') || '',
+      desc:  stripHtml(get('description', 'summary', 'content')).slice(0, 600),
+      ts:    parseDate(get('pubDate', 'published', 'updated', 'dc\\:date')),
     };
   });
+}
+
+/* Turn a raw item (from a live fetch, feeds.json or the local cache) into a display item.
+   KEV entries are always Critical: they are confirmed to be exploited in the wild. */
+function makeItem(feed, raw, i) {
+  const title = raw.title || '(no title)';
+  const desc  = raw.desc || '';
+  const link  = (raw.link || '').trim();
+  const ts    = Number.isFinite(raw.ts) ? raw.ts : Date.now();
+  let tags    = detectTags(title, desc);
+  if (raw.kev) {
+    const want = ['Vulnerability', ...(raw.ransomware ? ['Ransomware'] : [])];
+    tags = TAG_RULES.filter(r => want.includes(r.tag) || tags.includes(r));
+  }
+  const id = link ? `${feed.name}:${link}` : `${feed.name}-${i}-${ts}`;
+  return {
+    id, source: feed.name, color: feed.color, initials: feed.initials,
+    title, link, desc, date: new Date(ts), ts, tags,
+    priority: raw.kev ? 'critical' : getPriority(tags),
+    kev: !!raw.kev, ransomware: !!raw.ransomware,
+    read: readIds.has(id),
+  };
+}
+
+function makeItems(feed, raws) {
+  return raws.map((raw, i) => makeItem(feed, raw, i));
 }
 
 function stripHtml(html) {
@@ -304,66 +344,173 @@ const FETCH_STAGGER_MS  = 200; // pause between a lane's fetches
 
 /* Runs feedList through fetchFeed with bounded concurrency + a per-lane stagger.
    Each lane is offset by laneIdx * FETCH_STAGGER_MS before its first fetch so the
-   initial burst is spread out, not just the gap between sequential fetches within a lane. */
-async function fetchAllStaggered(feedList) {
-  const results = new Array(feedList.length);
+   initial burst is spread out. onSettled(feed, result) fires as each feed finishes,
+   so the list can fill in progressively instead of waiting for the slowest feed. */
+async function fetchAllStaggered(feedList, onSettled) {
   let next = 0;
   async function lane(laneIdx) {
     if (laneIdx > 0) await new Promise(r => setTimeout(r, laneIdx * FETCH_STAGGER_MS));
     while (next < feedList.length) {
-      const i = next++;
-      try { results[i] = { status: 'fulfilled', value: await fetchFeed(feedList[i]) }; }
-      catch (e) { results[i] = { status: 'rejected', reason: e }; }
+      const feed = feedList[next++];
+      let result;
+      try { result = { status: 'fulfilled', value: await fetchFeed(feed) }; }
+      catch (e) { result = { status: 'rejected', reason: e }; }
+      onSettled(feed, result);
       if (next < feedList.length) await new Promise(r => setTimeout(r, FETCH_STAGGER_MS));
     }
   }
   const laneCount = Math.min(FETCH_CONCURRENCY, feedList.length);
   await Promise.all(Array.from({ length: laneCount }, (_, i) => lane(i)));
-  return results;
 }
 
 /* Most recent successful fetch per feed name — lets a transient failure fall back
    to last-known articles instead of blanking that source out of the dashboard. */
 let lastGoodByFeed = new Map();
+let lastRefreshAt  = 0;      // ms timestamp of the data currently shown (snapshot build time or fetch time)
+let lastCheckedAt  = 0;      // ms timestamp of the last completed refresh attempt
+let refreshing     = false;
+let pendingItems   = null;   // background-refresh results held back while the user is scrolled down
 
-async function refreshAll(quiet = false) {
-  const enabled = feeds.filter(f => f.enabled);
-  if (!enabled.length) { showToast('No feeds enabled'); return; }
+/* Pre-built snapshot of every built-in feed, produced server-side by GitHub Actions.
+   One same-origin request replaces 40+ proxy calls. Returns null if unavailable. */
+async function loadSnapshot() {
+  try {
+    const r = await fetch(SNAPSHOT_URL, { cache: 'no-cache', signal: AbortSignal.timeout(8000) });
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d && d.feeds && d.generated ? d : null;
+  } catch { return null; }
+}
 
-  refreshBtn.classList.add('spinning');
-  if (!quiet) feedLoading.style.display = 'flex';
-
-  const results = await fetchAllStaggered(enabled);
-  let errors = 0, staleFallbacks = 0;
-  results.forEach((r, i) => {
-    const feed = enabled[i];
-    if (r.status === 'fulfilled') {
-      lastGoodByFeed.set(feed.name, r.value);
-    } else {
-      console.warn(feed.name, r.reason);
-      errors++;
-      if (lastGoodByFeed.has(feed.name)) staleFallbacks++;
-    }
+/* Merge every enabled feed's items, drop cross-feed duplicates (e.g. the same CISA
+   advisory in two CISA feeds — the first feed in the list wins), newest first. */
+function buildItems() {
+  const seen = new Set();
+  const out  = [];
+  feeds.filter(f => f.enabled).forEach(f => {
+    (lastGoodByFeed.get(f.name) || []).forEach(it => {
+      const key = it.link.replace(/\/+$/, '');
+      if (key && seen.has(key)) return;
+      if (key) seen.add(key);
+      out.push(it);
+    });
   });
+  return out.sort((a, b) => b.ts - a.ts);
+}
 
-  allItems = enabled.flatMap(f => lastGoodByFeed.get(f.name) || []).sort((a, b) => b.ts - a.ts);
-
-  feedLoading.style.display = 'none';
-  refreshBtn.classList.remove('spinning');
-
+function renderAll() {
   renderSourceChips();
   renderFeedList();
   updateChart();
   updateHeader();
+}
 
-  if (!quiet && errors) {
-    showToast(staleFallbacks
-      ? `${errors} feed(s) failed — showing last known articles for ${staleFallbacks}`
-      : `${errors} feed(s) failed`, 4000);
+/* Show newItems now, unless this is a background refresh and the user has scrolled
+   down the list — then hold them behind a "N new stories" button so the list
+   doesn't jump while they're reading. */
+function commitItems(newItems, background) {
+  newItems.forEach(i => { i.read = readIds.has(i.id); }); // stories may have been read since they were built
+  const known = new Set(allItems.map(i => i.id));
+  const added = newItems.filter(i => !known.has(i.id)).length;
+  if (background && allItems.length && added && feedListEl.scrollTop > 40) {
+    pendingItems = newItems;
+    newStoriesBtn.textContent = `${added} new stor${added === 1 ? 'y' : 'ies'} ↑`;
+    newStoriesBtn.hidden = false;
+    return;
   }
+  allItems = newItems;
+  pendingItems = null;
+  newStoriesBtn.hidden = true;
+  if (allItems.length) feedLoading.style.display = 'none';
+  renderAll();
+}
 
-  clearTimeout(refreshTimer);
-  refreshTimer = setTimeout(() => refreshAll(true), REFRESH_MS);
+let renderQueued = false;
+function scheduleRender(background) {
+  if (renderQueued) return;
+  renderQueued = true;
+  setTimeout(() => { renderQueued = false; commitItems(buildItems(), background); }, 250);
+}
+
+function saveCache() {
+  const out = {};
+  lastGoodByFeed.forEach((items, name) => {
+    out[name] = items.map(({ title, link, desc, ts, kev, ransomware }) =>
+      ({ title, link, desc, ts, ...(kev && { kev }), ...(ransomware && { ransomware }) }));
+  });
+  safeSetItem(CACHE_KEY, JSON.stringify({ savedAt: lastRefreshAt, feeds: out }));
+}
+
+/* Show the articles from the previous visit immediately, before any network request. */
+function loadCache() {
+  try {
+    const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+    if (!c || !c.feeds) return false;
+    feeds.forEach(f => { if (c.feeds[f.name]) lastGoodByFeed.set(f.name, makeItems(f, c.feeds[f.name])); });
+    lastRefreshAt = c.savedAt || 0;
+    commitItems(buildItems(), false);
+    return allItems.length > 0;
+  } catch { return false; }
+}
+
+/* background: an automatic refresh (timer, tab return, startup with cached data) —
+   no loading spinner, no failure toasts, and new stories may be held back. */
+async function refreshAll(background = false) {
+  if (refreshing) return;
+  const enabled = feeds.filter(f => f.enabled);
+  if (!enabled.length) { showToast('No feeds enabled'); return; }
+  refreshing = true;
+
+  refreshBtn.classList.add('spinning');
+  if (!allItems.length) feedLoading.style.display = 'flex';
+
+  try {
+    const snap  = await loadSnapshot();
+    const fresh = !!snap && Date.now() - Date.parse(snap.generated) < SNAPSHOT_MAX_AGE_MS;
+    const live  = [];
+
+    enabled.forEach(feed => {
+      const entry = snap?.feeds[feed.url];
+      if (entry?.items?.length && (fresh && entry.ok || !lastGoodByFeed.has(feed.name))) {
+        lastGoodByFeed.set(feed.name, makeItems(feed, entry.items));
+      }
+      /* Live-fetch custom feeds, feeds the pipeline failed on, and everything when the
+         snapshot is missing or stale. KEV can't be fetched live (no CORS, not RSS). */
+      if (!(fresh && entry?.ok) && feed.type !== 'kev') live.push(feed);
+    });
+    if (snap) scheduleRender(background);
+
+    let errors = 0, staleFallbacks = 0;
+    await fetchAllStaggered(live, (feed, r) => {
+      if (r.status === 'fulfilled') {
+        lastGoodByFeed.set(feed.name, makeItems(feed, r.value));
+        scheduleRender(background);
+      } else {
+        console.warn(feed.name, r.reason);
+        errors++;
+        if (lastGoodByFeed.has(feed.name)) staleFallbacks++;
+      }
+    });
+
+    lastRefreshAt = fresh ? Date.parse(snap.generated) : Date.now();
+    lastCheckedAt = Date.now();
+    commitItems(buildItems(), background);
+    saveCache();
+
+    if (!background && errors) {
+      showToast(staleFallbacks
+        ? `${errors} feed(s) failed — showing last known articles for ${staleFallbacks}`
+        : `${errors} feed(s) failed`, 4000);
+    }
+
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(() => refreshAll(true), fresh ? REFRESH_MS : REFRESH_SLOW_MS);
+  } finally {
+    refreshing = false;
+    feedLoading.style.display = 'none';
+    refreshBtn.classList.remove('spinning');
+    updateHeader();
+  }
 }
 
 /* ── Header ── */
@@ -372,7 +519,8 @@ function updateHeader() {
   const n = items.length;
   const unread = items.filter(it => !it.read).length;
   itemCount.textContent = `${n} item${n !== 1 ? 's' : ''}` + (unread ? ` · ${unread} unread` : '');
-  lastUpdated.textContent = 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  lastUpdated.textContent = lastRefreshAt ? `Updated ${relTime(new Date(lastRefreshAt))}` : '';
+  lastUpdated.title = lastRefreshAt ? new Date(lastRefreshAt).toLocaleString() : '';
 }
 
 /* ── Filtering ── */
@@ -578,6 +726,7 @@ function selectItem(item) {
 
 /* ── Charts ── */
 function updateChart() {
+  if (typeof Chart === 'undefined') return; // CDN unavailable (e.g. offline)
   if (chart && chartCurrentMode !== chartMode) { chart.destroy(); chart = null; }
   const light = document.documentElement.dataset.theme === 'light';
   Chart.defaults.color       = light ? '#6a6a90' : '#46465e';
@@ -773,6 +922,7 @@ function deleteFeed(feed) {
   feeds    = feeds.filter(f => f.url !== feed.url);
   allItems = allItems.filter(it => it.source !== feed.name);
   lastGoodByFeed.delete(feed.name);
+  saveCache();
 
   if (activeIsFromFeed) {
     articleContent.hidden = true;
@@ -794,6 +944,7 @@ function applySettings() {
   });
   saveAllFeeds();
   closeSettings();
+  commitItems(buildItems(), false); // apply enable/disable immediately, even if a refresh is in flight
   refreshAll();
 }
 
@@ -819,7 +970,7 @@ async function testAndAddFeed() {
   addBtn.disabled = true;
 
   try {
-    const items = await fetchFeed(newFeed);
+    const items = makeItems(newFeed, await fetchFeed(newFeed));
     if (!items.length) throw new Error('Feed returned 0 items — is this a valid RSS URL?');
 
     feeds.push(newFeed);
@@ -828,11 +979,8 @@ async function testAndAddFeed() {
     urlInput.value  = '';
     showToast(`Added "${name}" — ${items.length} item${items.length !== 1 ? 's' : ''} found`);
     lastGoodByFeed.set(newFeed.name, items);
-    allItems = [...allItems, ...items].sort((a, b) => b.ts - a.ts);
-    renderSourceChips();
-    renderFeedList();
-    updateChart();
-    updateHeader();
+    commitItems(buildItems(), false);
+    saveCache();
     openSettings();
   } catch (e) {
     showToast(`Could not load: ${e.message}`, 4500);
@@ -858,7 +1006,7 @@ function escapeXmlAttr(s) {
 
 function exportOPML() {
   const now = new Date().toUTCString();
-  const items = feeds.map(f => {
+  const items = feeds.filter(f => f.type !== 'kev').map(f => {  // KEV is JSON, not RSS
     const name = escapeXmlAttr(f.name);
     const url  = escapeXmlAttr(f.url);
     return `      <outline type="rss" text="${name}" title="${name}" xmlUrl="${url}"/>`;
@@ -897,6 +1045,19 @@ if (addFeedBtn) addFeedBtn.addEventListener('click', testAndAddFeed);
 if (newFeedUrl)  newFeedUrl.addEventListener('keydown',  e => { if (e.key === 'Enter') testAndAddFeed(); });
 if (newFeedName) newFeedName.addEventListener('keydown', e => { if (e.key === 'Enter') $('new-feed-url')?.focus(); });
 refreshBtn.addEventListener('click',   () => refreshAll());
+newStoriesBtn.addEventListener('click', () => {
+  if (pendingItems) commitItems(pendingItems, false);
+  feedListEl.scrollTop = 0;
+});
+
+/* Background tabs throttle timers, so also refresh when the user comes back
+   (or reconnects) and the data is getting old. */
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && Date.now() - lastCheckedAt > STALE_ON_RETURN_MS) refreshAll(true);
+});
+window.addEventListener('online', () => refreshAll(true));
+/* Keep the "Updated 5m ago" label current */
+setInterval(() => { if (document.visibilityState === 'visible') updateHeader(); }, 60 * 1000);
 markReadBtn.addEventListener('click',  markAllRead);
 settingsBtn.addEventListener('click',  openSettings);
 settingsClose.addEventListener('click', closeSettings);
@@ -1097,4 +1258,5 @@ if ('serviceWorker' in navigator) {
 /* ── Init ── */
 initTagBar();
 initPriorityBar();
-refreshAll();
+/* With cached articles on screen, refresh quietly in the background. */
+refreshAll(loadCache());

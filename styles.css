@@ -213,6 +213,15 @@ body {
 #feed-list {
   flex: 1; overflow-y: auto; background: var(--bg);
 }
+/* "N new stories" pill: sticks to the top of the scrolling list during background refreshes */
+.new-stories-btn {
+  position: sticky; top: 8px; z-index: 2; display: block; margin: 8px auto -30px;
+  height: 22px; padding: 0 12px; border-radius: 11px; border: 1px solid var(--accent-border);
+  background: var(--accent-dim); color: var(--accent-text); font-size: 11px; cursor: pointer;
+  box-shadow: 0 2px 8px var(--modal-shadow);
+}
+.new-stories-btn:hover { background: var(--accent); color: #fff; }
+.new-stories-btn[hidden] { display: none; }
 #feed-list::-webkit-scrollbar { width: 3px; }
 #feed-list::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
 
