@@ -2,7 +2,7 @@
 
 A Progressive Web App (PWA) that aggregates 39 cyber threat intelligence sources into a single, real-time dashboard.
 
-![Version](https://img.shields.io/badge/version-v0.2.1-blue) ![License](https://img.shields.io/badge/license-MIT-green)
+![Version](https://img.shields.io/badge/version-v0.2.2-blue) ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Features
 
@@ -125,9 +125,33 @@ re-enable it from the Actions tab if the snapshot stops updating.
 
 Open the **Settings** gear icon to enable/disable any feed. Use the **Add Custom Feed** form at the bottom to add any RSS URL — the app tests the feed live before saving it.
 
-Custom feeds are stored in `localStorage` and persist across sessions.
+Custom feeds are stored in `localStorage` and persist across sessions. They only appear in the
+browser where you added them, and are fetched live by your browser rather than from the
+`feeds.json` snapshot:
+
+- When you add a feed, the app first tries loading it **directly**. If the feed allows that
+  (it sends CORS headers), it's remembered and always loaded directly — fast, and no proxy limits.
+- Otherwise it's loaded through the **rss2json** proxy, which caps feeds at 10 stories and
+  sometimes rate-limits new feeds. If that happens, try again later.
+
+### Suggesting a feed for everyone
+
+To get a source added to the built-in list (collected every 15 minutes, visible to all users),
+use **Suggest a feed for everyone** under the Add Custom Feed form, or the paper-plane button
+next to any custom feed. It opens a pre-filled
+[feed suggestion issue](https://github.com/jayclark5150/cyber-threat-tracker/issues/new?template=feed-suggestion.yml)
+on GitHub (a GitHub account is required).
 
 ## Changelog
+
+### v0.2.2 (2026-10-01)
+
+- **Custom feeds load directly when possible** — when a feed is added, the app tests a direct
+  load first and remembers whether the feed allows it. Feeds that do never touch the rss2json
+  proxy. Existing custom feeds are detected on their next refresh.
+- **Suggest a feed for everyone** — a link under Add Custom Feed and a button on each custom feed
+  open a pre-filled GitHub issue (new `feed-suggestion` issue form) to propose it as a built-in feed
+- Clearer message when rss2json is rate-limiting new feeds
 
 ### v0.2.1 (2026-10-01)
 

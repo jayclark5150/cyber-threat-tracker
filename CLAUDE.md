@@ -26,13 +26,15 @@ This is a **vanilla JS single-page app** — no framework, no bundler, no build 
 - **`VERSION`** in `app.js` is the single source for the version shown in the header badge and the chart toolbar; also update the README badge/changelog when bumping it.
 - **`index.html`** — static app shell with all DOM structure. Elements are referenced by ID via the `$ = id => document.getElementById(id)` shorthand in `app.js`.
 - **`styles.css`** — CSS custom properties drive the dark/light theme; `data-theme` on `<html>` switches between them.
-- **`sw.js`** — service worker. Cache name is `ctt-v8`; increment it whenever cached assets change so old caches are evicted on activate. `feeds.json` is network-first with the last copy kept for offline.
+- **`sw.js`** — service worker. Cache name is `ctt-v9`; increment it whenever cached assets change so old caches are evicted on activate. `feeds.json` is network-first with the last copy kept for offline.
 - **`scripts/build_feeds.py`** — server-side snapshot builder (Python stdlib). Reads the feed list from `app.js`, writes `feeds.json`.
 - **`.github/workflows/update-feeds.yml`** — runs the builder every 15 min and on push, then deploys to GitHub Pages (Pages source must be "GitHub Actions"; the site is not served from the branch).
 
 ## Feed Fetching
 
 The feed list is `FEEDS` in `app.js`, written as **strict JSON** between `/*FEEDS:START*/` and `/*FEEDS:END*/` so `scripts/build_feeds.py` can parse it. Keep it valid JSON (double quotes, no comments or trailing commas). Optional fields: `cors: true` (fetch directly before the proxy), `type: "kev"` (CISA KEV JSON — only available via the snapshot).
+
+Custom feeds (`custom: true`, stored in `ctt-custom`) have `cors` learned at runtime: `fetchFeed()` tries direct first while it's unknown, records which strategy worked in `feed.cors`, and `refreshAll()` persists changes via `saveAllFeeds()`. "Suggest a feed" opens `.github/ISSUE_TEMPLATE/feed-suggestion.yml` pre-filled through URL params matching the form field ids (`feed-name`, `feed-url`).
 
 `refreshAll()` loads in three layers:
 1. **Cache** — `loadCache()` renders the previous visit's items from `localStorage` before any network request.

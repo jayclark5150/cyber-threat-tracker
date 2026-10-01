@@ -66,7 +66,8 @@ const TAG_RULES = [
     words: ['ddos','denial of service','distributed denial','mirai','botnet attack'] },
 ];
 
-const VERSION     = 'v0.2.1';
+const VERSION     = 'v0.2.2';
+const REPO_URL    = 'https://github.com/jayclark5150/cyber-threat-tracker';
 const REFRESH_MS       = 5 * 60 * 1000;   // auto-refresh when the feeds.json snapshot is fresh
 const REFRESH_SLOW_MS  = 15 * 60 * 1000;  // auto-refresh when falling back to live proxy fetches
 const STALE_ON_RETURN_MS = 5 * 60 * 1000; // refresh on tab return if data is older than this
@@ -237,20 +238,29 @@ async function viaDirect(feedUrl) {
 }
 
 /* Returns raw items ({ title, link, desc, ts }), newest first, capped per feed.
-   Feeds marked cors:true skip the proxy entirely when the direct fetch works. */
+   Feeds marked cors:true skip the proxy entirely when the direct fetch works.
+   Custom feeds whose CORS support is still unknown try direct first (a CORS
+   rejection fails instantly), and remember which method worked in feed.cors. */
 async function fetchFeed(feed) {
   if (feed.type === 'kev') throw new Error('CISA KEV is only available from the feeds.json snapshot');
-  const strategies = feed.cors ? [viaDirect, viaRss2json] : [viaRss2json, viaDirect];
+  const directFirst = feed.cors ?? !!feed.custom;
+  const strategies = directFirst ? [viaDirect, viaRss2json] : [viaRss2json, viaDirect];
   let lastErr;
   for (const strategy of strategies) {
     try {
-      return (await strategy(feed.url)).sort((a, b) => b.ts - a.ts).slice(0, MAX_ITEMS_PER_FEED);
+      const items = await strategy(feed.url);
+      if (feed.custom) {
+        const cors = strategy === viaDirect;
+        if (feed.cors !== cors) { feed.cors = cors; customCorsChanged = true; }
+      }
+      return items.sort((a, b) => b.ts - a.ts).slice(0, MAX_ITEMS_PER_FEED);
     } catch (e) {
       lastErr = e;
     }
   }
   throw lastErr;
 }
+let customCorsChanged = false; // set by fetchFeed; refreshAll persists it via saveAllFeeds()
 
 function parseDate(s) {
   const t = s ? Date.parse(s) : NaN;
@@ -496,6 +506,7 @@ async function refreshAll(background = false) {
     lastCheckedAt = Date.now();
     commitItems(buildItems(), background);
     saveCache();
+    if (customCorsChanged) { customCorsChanged = false; saveAllFeeds(); }
 
     if (!background && errors) {
       showToast(staleFallbacks
@@ -898,6 +909,14 @@ function openSettings() {
     row.append(dot, nameEl, tog);
 
     if (feed.custom) {
+      const sug = document.createElement('button');
+      sug.className = 'source-suggest';
+      sug.title = 'Suggest adding this feed for everyone';
+      sug.setAttribute('aria-label', `Suggest ${feed.name} as a built-in feed`);
+      sug.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>`;
+      sug.addEventListener('click', () => suggestFeed(feed.name, feed.url));
+      row.appendChild(sug);
+
       const del = document.createElement('button');
       del.className = 'source-delete';
       del.title = 'Remove this feed';
@@ -973,21 +992,36 @@ async function testAndAddFeed() {
     const items = makeItems(newFeed, await fetchFeed(newFeed));
     if (!items.length) throw new Error('Feed returned 0 items — is this a valid RSS URL?');
 
+    customCorsChanged = false; // newFeed.cors was just set by the test fetch and is saved below
     feeds.push(newFeed);
     saveAllFeeds();
     nameInput.value = '';
     urlInput.value  = '';
-    showToast(`Added "${name}" — ${items.length} item${items.length !== 1 ? 's' : ''} found`);
+    showToast(`Added "${name}" — ${items.length} item${items.length !== 1 ? 's' : ''} found` +
+      (newFeed.cors ? ' · loads directly' : ' · loads via proxy'), 4000);
     lastGoodByFeed.set(newFeed.name, items);
     commitItems(buildItems(), false);
     saveCache();
     openSettings();
   } catch (e) {
-    showToast(`Could not load: ${e.message}`, 4500);
+    const msg = /429/.test(e.message)
+      ? 'This feed needs the rss2json proxy, which is rate-limiting new feeds right now. Try again later, or use "Suggest a feed for everyone".'
+      : `Could not load: ${e.message}`;
+    showToast(msg, 6000);
   } finally {
     addBtn.textContent = 'Test & Add';
     addBtn.disabled = false;
   }
+}
+
+/* ── Suggest a feed ── */
+/* Opens a GitHub issue pre-filled from .github/ISSUE_TEMPLATE/feed-suggestion.yml
+   (query params matching the form's field ids fill those fields). */
+function suggestFeed(name = '', url = '') {
+  const params = new URLSearchParams({ template: 'feed-suggestion.yml', title: `Feed suggestion: ${name || ''}`.trim() });
+  if (name) params.set('feed-name', name);
+  if (url)  params.set('feed-url', url);
+  window.open(`${REPO_URL}/issues/new?${params}`, '_blank', 'noopener');
 }
 
 /* ── Toast ── */
@@ -1042,6 +1076,10 @@ const addFeedBtn  = $('add-feed-btn');
 const newFeedUrl  = $('new-feed-url');
 const newFeedName = $('new-feed-name');
 if (addFeedBtn) addFeedBtn.addEventListener('click', testAndAddFeed);
+$('suggest-feed-link')?.addEventListener('click', e => {
+  e.preventDefault();
+  suggestFeed($('new-feed-name').value.trim(), $('new-feed-url').value.trim());
+});
 if (newFeedUrl)  newFeedUrl.addEventListener('keydown',  e => { if (e.key === 'Enter') testAndAddFeed(); });
 if (newFeedName) newFeedName.addEventListener('keydown', e => { if (e.key === 'Enter') $('new-feed-url')?.focus(); });
 refreshBtn.addEventListener('click',   () => refreshAll());
