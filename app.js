@@ -66,7 +66,7 @@ const TAG_RULES = [
     words: ['ddos','denial of service','distributed denial','mirai','botnet attack'] },
 ];
 
-const VERSION     = 'v0.2.0';
+const VERSION     = 'v0.2.1';
 const REFRESH_MS       = 5 * 60 * 1000;   // auto-refresh when the feeds.json snapshot is fresh
 const REFRESH_SLOW_MS  = 15 * 60 * 1000;  // auto-refresh when falling back to live proxy fetches
 const STALE_ON_RETURN_MS = 5 * 60 * 1000; // refresh on tab return if data is older than this
@@ -1256,6 +1256,8 @@ if ('serviceWorker' in navigator) {
 }
 
 /* ── Init ── */
+$('version-badge').textContent = VERSION;
+$('app-version').textContent   = VERSION;
 initTagBar();
 initPriorityBar();
 /* With cached articles on screen, refresh quietly in the background. */

@@ -23,9 +23,10 @@ There are no tests, no linter config, and no package.json.
 This is a **vanilla JS single-page app** — no framework, no bundler, no build pipeline. The entire application logic lives in three files:
 
 - **`app.js`** — all state, feed fetching, parsing, rendering, and event wiring. No modules; everything is in one `'use strict'` script.
+- **`VERSION`** in `app.js` is the single source for the version shown in the header badge and the chart toolbar; also update the README badge/changelog when bumping it.
 - **`index.html`** — static app shell with all DOM structure. Elements are referenced by ID via the `$ = id => document.getElementById(id)` shorthand in `app.js`.
 - **`styles.css`** — CSS custom properties drive the dark/light theme; `data-theme` on `<html>` switches between them.
-- **`sw.js`** — service worker. Cache name is `ctt-v7`; increment it whenever cached assets change so old caches are evicted on activate. `feeds.json` is network-first with the last copy kept for offline.
+- **`sw.js`** — service worker. Cache name is `ctt-v8`; increment it whenever cached assets change so old caches are evicted on activate. `feeds.json` is network-first with the last copy kept for offline.
 - **`scripts/build_feeds.py`** — server-side snapshot builder (Python stdlib). Reads the feed list from `app.js`, writes `feeds.json`.
 - **`.github/workflows/update-feeds.yml`** — runs the builder every 15 min and on push, then deploys to GitHub Pages (Pages source must be "GitHub Actions"; the site is not served from the branch).
 

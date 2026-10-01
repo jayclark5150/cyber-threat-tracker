@@ -2,7 +2,7 @@
 
 A Progressive Web App (PWA) that aggregates 39 cyber threat intelligence sources into a single, real-time dashboard.
 
-![Version](https://img.shields.io/badge/version-v0.2.0-blue) ![License](https://img.shields.io/badge/license-MIT-green)
+![Version](https://img.shields.io/badge/version-v0.2.1-blue) ![License](https://img.shields.io/badge/license-MIT-green)
 
 ## Features
 
@@ -128,6 +128,10 @@ Open the **Settings** gear icon to enable/disable any feed. Use the **Add Custom
 Custom feeds are stored in `localStorage` and persist across sessions.
 
 ## Changelog
+
+### v0.2.1 (2026-10-01)
+
+- App version is now also shown in the chart toolbar, so it's visible on mobile (the header badge is hidden on small screens). Both read from `VERSION` in `app.js`.
 
 ### v0.2.0 (2026-10-01)
 
